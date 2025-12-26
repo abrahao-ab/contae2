@@ -28,10 +28,10 @@ const formatCurrency = (value: number) => {
 
 export function CreditCardWidget({ cards, onAddCard }: CreditCardWidgetProps) {
   return (
-    <Card className="border-border">
+    <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-semibold">Cartões de Crédito</CardTitle>
-        <Button variant="ghost" size="sm" onClick={onAddCard} className="h-8 px-2">
+        <CardTitle className="text-lg font-semibold text-card-foreground">Cartões de Crédito</CardTitle>
+        <Button variant="ghost" size="sm" onClick={onAddCard} className="h-8 px-2 text-primary hover:text-primary/80">
           <Plus className="w-4 h-4 mr-1" />
           Adicionar
         </Button>
@@ -53,7 +53,7 @@ export function CreditCardWidget({ cards, onAddCard }: CreditCardWidgetProps) {
             return (
               <div
                 key={card.id}
-                className="p-4 rounded-xl bg-muted/50 border border-border/50 space-y-3"
+                className="p-4 rounded-xl bg-muted/50 border border-border space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -61,10 +61,10 @@ export function CreditCardWidget({ cards, onAddCard }: CreditCardWidgetProps) {
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: card.color || 'hsl(var(--primary))' }}
                     >
-                      <CreditCard className="w-5 h-5 text-primary-foreground" />
+                      <CreditCard className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{card.name}</p>
+                      <p className="font-medium text-card-foreground">{card.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {card.bankName} {card.lastFourDigits && `•••• ${card.lastFourDigits}`}
                       </p>
@@ -75,14 +75,14 @@ export function CreditCardWidget({ cards, onAddCard }: CreditCardWidgetProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Utilizado</span>
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium text-card-foreground">
                       {formatCurrency(card.currentBalance)}
                     </span>
                   </div>
                   <Progress 
                     value={usagePercent} 
                     className={cn(
-                      'h-2',
+                      'h-2 bg-muted',
                       usagePercent > 80 ? '[&>div]:bg-expense' : usagePercent > 50 ? '[&>div]:bg-warning' : '[&>div]:bg-income'
                     )}
                   />

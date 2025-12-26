@@ -37,14 +37,14 @@ const sourceLabels = {
 
 export function RecentTransactions({ transactions, onAddTransaction, onViewAll }: RecentTransactionsProps) {
   return (
-    <Card className="border-border">
+    <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-semibold">Transações Recentes</CardTitle>
+        <CardTitle className="text-lg font-semibold text-card-foreground">Transações Recentes</CardTitle>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onViewAll} className="h-8 px-2 text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={onViewAll} className="h-8 px-2 text-muted-foreground hover:text-foreground">
             Ver todas
           </Button>
-          <Button variant="ghost" size="sm" onClick={onAddTransaction} className="h-8 px-2">
+          <Button variant="ghost" size="sm" onClick={onAddTransaction} className="h-8 px-2 text-primary hover:text-primary/80">
             <Plus className="w-4 h-4 mr-1" />
             Nova
           </Button>
@@ -64,7 +64,7 @@ export function RecentTransactions({ transactions, onAddTransaction, onViewAll }
             {transactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -80,7 +80,7 @@ export function RecentTransactions({ transactions, onAddTransaction, onViewAll }
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{transaction.description}</p>
+                    <p className="font-medium text-card-foreground">{transaction.description}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{format(new Date(transaction.date), "dd 'de' MMM", { locale: ptBR })}</span>
                       {transaction.category && (
@@ -90,7 +90,7 @@ export function RecentTransactions({ transactions, onAddTransaction, onViewAll }
                         </>
                       )}
                       <span>•</span>
-                      <span className="text-primary/70">{sourceLabels[transaction.source]}</span>
+                      <span className="text-primary">{sourceLabels[transaction.source]}</span>
                     </div>
                   </div>
                 </div>

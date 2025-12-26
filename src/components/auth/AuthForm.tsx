@@ -51,18 +51,18 @@ export function AuthForm() {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary mb-4 glow-primary">
-            <Wallet className="w-8 h-8 text-primary-foreground" />
+            <Wallet className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">FinanceAI</h1>
           <p className="text-muted-foreground mt-2">Controle financeiro inteligente</p>
         </div>
 
-        <Card className="border-border/50 shadow-lg">
+        <Card className="bg-card border-border shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-semibold text-center">
+            <CardTitle className="text-2xl font-semibold text-center text-card-foreground">
               {isLogin ? 'Entrar' : 'Criar conta'}
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className="text-center text-muted-foreground">
               {isLogin
                 ? 'Acesse sua conta para gerenciar suas finanças'
                 : 'Crie sua conta e comece a controlar suas finanças'}
@@ -72,7 +72,7 @@ export function AuthForm() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome completo</Label>
+                  <Label htmlFor="fullName" className="text-foreground">Nome completo</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -81,7 +81,7 @@ export function AuthForm() {
                       placeholder="Seu nome"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                       required={!isLogin}
                     />
                   </div>
@@ -89,7 +89,7 @@ export function AuthForm() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-foreground">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -98,14 +98,14 @@ export function AuthForm() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password" className="text-foreground">Senha</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -114,14 +114,14 @@ export function AuthForm() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                     required
                     minLength={6}
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-primary text-white hover:bg-primary/90" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
