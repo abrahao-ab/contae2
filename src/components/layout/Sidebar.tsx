@@ -28,18 +28,18 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-sidebar">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-6 border-b border-sidebar-border">
         <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-          <Wallet className="w-5 h-5 text-primary-foreground" />
+          <Wallet className="w-5 h-5 text-white" />
         </div>
         {!collapsed && (
           <div className="animate-fade-in">
@@ -60,7 +60,7 @@ export function Sidebar() {
               cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
                 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent',
-                isActive && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary'
+                isActive && 'bg-sidebar-primary text-white hover:bg-sidebar-primary'
               )
             }
           >
@@ -79,7 +79,7 @@ export function Sidebar() {
             cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
               'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent',
-              isActive && 'bg-sidebar-primary text-sidebar-primary-foreground'
+              isActive && 'bg-sidebar-primary text-white'
             )
           }
         >
@@ -91,7 +91,7 @@ export function Sidebar() {
           onClick={handleSignOut}
           className={cn(
             'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
-            'text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10'
+            'text-sidebar-foreground/70 hover:text-red-400 hover:bg-red-500/10'
           )}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -116,9 +116,9 @@ export function Sidebar() {
     <>
       {/* Mobile Menu Button */}
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-card border-border text-foreground"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -127,7 +127,7 @@ export function Sidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}

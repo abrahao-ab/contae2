@@ -22,11 +22,11 @@
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 40%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 40%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -35,15 +35,15 @@
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning-foreground: 0 0% 0%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 32% 85%;
+    --input: 214 32% 85%;
     --ring: 217 91% 50%;
 
     --radius: 0.75rem;
 
-    /* Sidebar */
+    /* Sidebar - Always dark in light mode for contrast */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 91% 60%;
@@ -59,7 +59,7 @@
     --expense: 0 84% 60%;
     --expense-foreground: 0 0% 100%;
     --limit: 38 92% 50%;
-    --limit-foreground: 0 0% 100%;
+    --limit-foreground: 0 0% 0%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%), hsl(217 91% 40%));
@@ -69,7 +69,7 @@
   }
 
   .dark {
-    /* Financial App - Dark Mode (Main Theme) */
+    /* Financial App - Dark Mode */
     --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 

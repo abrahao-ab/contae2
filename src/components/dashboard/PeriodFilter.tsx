@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type Period = 'day' | 'week' | 'month' | 'year';
@@ -42,7 +42,7 @@ export function PeriodFilter({ selectedPeriod, onPeriodChange, currentDate, onDa
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+      <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
         {periods.map((period) => (
           <Button
             key={period.value}
@@ -52,8 +52,8 @@ export function PeriodFilter({ selectedPeriod, onPeriodChange, currentDate, onDa
             className={cn(
               'h-8 px-3 transition-all',
               selectedPeriod === period.value
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'hover:bg-muted'
+                ? 'bg-primary text-white hover:bg-primary/90 hover:text-white'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
             )}
           >
             {period.label}
@@ -62,14 +62,14 @@ export function PeriodFilter({ selectedPeriod, onPeriodChange, currentDate, onDa
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrevious}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={handlePrevious}>
           <ChevronLeft className="w-4 h-4" />
         </Button>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg min-w-[180px] justify-center">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg min-w-[180px] justify-center">
           <Calendar className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium capitalize">{getDateLabel()}</span>
+          <span className="text-sm font-medium text-foreground capitalize">{getDateLabel()}</span>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNext}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={handleNext}>
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

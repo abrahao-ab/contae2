@@ -18,16 +18,30 @@ interface StatCardProps {
 export function StatCard({ title, value, icon, trend, variant = 'default', className }: StatCardProps) {
   const variants = {
     default: 'bg-card border-border',
-    income: 'bg-card border-income/30',
-    expense: 'bg-card border-expense/30',
-    primary: 'gradient-primary border-primary/30 text-primary-foreground',
+    income: 'bg-card border-l-4 border-l-income border-border',
+    expense: 'bg-card border-l-4 border-l-expense border-border',
+    primary: 'gradient-primary border-transparent',
   };
 
   const iconBgVariants = {
-    default: 'bg-muted text-foreground',
+    default: 'bg-muted text-muted-foreground',
     income: 'bg-income/10 text-income',
     expense: 'bg-expense/10 text-expense',
-    primary: 'bg-primary-foreground/20 text-primary-foreground',
+    primary: 'bg-white/20 text-white',
+  };
+
+  const textVariants = {
+    default: 'text-card-foreground',
+    income: 'text-card-foreground',
+    expense: 'text-card-foreground',
+    primary: 'text-white',
+  };
+
+  const subtextVariants = {
+    default: 'text-muted-foreground',
+    income: 'text-muted-foreground',
+    expense: 'text-muted-foreground',
+    primary: 'text-white/70',
   };
 
   return (
@@ -35,16 +49,10 @@ export function StatCard({ title, value, icon, trend, variant = 'default', class
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <p className={cn(
-              'text-sm font-medium',
-              variant === 'primary' ? 'text-primary-foreground/80' : 'text-muted-foreground'
-            )}>
+            <p className={cn('text-sm font-medium', subtextVariants[variant])}>
               {title}
             </p>
-            <p className={cn(
-              'text-2xl lg:text-3xl font-bold tracking-tight',
-              variant === 'primary' ? 'text-primary-foreground' : 'text-foreground'
-            )}>
+            <p className={cn('text-2xl lg:text-3xl font-bold tracking-tight', textVariants[variant])}>
               {value}
             </p>
             {trend && (
@@ -58,10 +66,7 @@ export function StatCard({ title, value, icon, trend, variant = 'default', class
                   <TrendingDown className="w-4 h-4" />
                 )}
                 <span>{trend.value}%</span>
-                <span className={cn(
-                  'font-normal',
-                  variant === 'primary' ? 'text-primary-foreground/60' : 'text-muted-foreground'
-                )}>
+                <span className={cn('font-normal', subtextVariants[variant])}>
                   vs mês anterior
                 </span>
               </div>
