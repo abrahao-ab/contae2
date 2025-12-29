@@ -50,6 +50,7 @@ interface Category {
 interface CreditCard {
   id: string;
   name: string;
+  closing_day: number | null;
 }
 
 interface BankAccount {
@@ -110,7 +111,7 @@ export default function Transactions() {
           .order('name'),
         supabase
           .from('credit_cards')
-          .select('id, name')
+          .select('id, name, closing_day')
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('name'),
@@ -153,6 +154,22 @@ export default function Transactions() {
     fetchData();
   }, [user]);
 
+  const getFirstInstallmentDate = (transactionDate: Date, closingDay: number | null): Date => {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const closingDayValue = closingDay || 1;
+    
+    // Start with the transaction date
+    let firstDate = new Date(transactionDate);
+    
+    // If the transaction day is after closing day, first installment goes to next month's invoice
+    if (transactionDate.getDate() > closingDayValue) {
+      firstDate.setMonth(firstDate.getMonth() + 1);
+    }
+    
+    return firstDate;
+  };
+
   const handleCreateTransaction = async (data: any) => {
     if (!user) return;
 
@@ -162,10 +179,17 @@ export default function Transactions() {
     const installmentAmount = isInstallment ? totalAmount / totalInstallments : totalAmount;
 
     try {
+      // Get credit card closing day if a card is selected
+      let closingDay: number | null = null;
+      if (data.creditCardId) {
+        const selectedCard = creditCards.find(c => c.id === data.creditCardId);
+        closingDay = selectedCard?.closing_day || null;
+      }
+
       // If installment, create multiple transactions (one per month)
       if (isInstallment && totalInstallments) {
         const transactionsToInsert = [];
-        const baseDate = new Date(data.date);
+        const baseDate = getFirstInstallmentDate(new Date(data.date), closingDay);
 
         for (let i = 0; i < totalInstallments; i++) {
           const installmentDate = new Date(baseDate);
@@ -208,7 +232,7 @@ export default function Transactions() {
         if (error) throw error;
       }
 
-      // Update credit card balance if credit card was used
+      // Update credit card balance if credit card was used (add full amount for installments)
       if (data.creditCardId && data.type === 'expense') {
         const { data: cardData } = await supabase
           .from('credit_cards')
