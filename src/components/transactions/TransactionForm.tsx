@@ -34,10 +34,11 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, ArrowUpRight, ArrowDownRight, CalendarIcon } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownRight, CalendarIcon, User, Users, Heart } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useCouple } from '@/hooks/useCouple';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -49,6 +50,7 @@ const transactionSchema = z.object({
   bankAccountId: z.string().optional(),
   isInstallment: z.boolean().default(false),
   totalInstallments: z.number().min(2).max(48).optional(),
+  ownerType: z.enum(['individual', 'partner', 'shared']).optional(),
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -64,6 +66,7 @@ interface Transaction {
   bank_account_id: string | null;
   is_installment: boolean | null;
   total_installments: number | null;
+  owner_type?: string;
 }
 
 interface TransactionFormProps {
@@ -87,6 +90,10 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const [loading, setLoading] = useState(false);
   const isEditing = !!transaction;
+  const { isCouplePlan, hasCouple, currentMember, partner } = useCouple();
+
+  // Show owner field only for couple plan users with an active couple
+  const showOwnerField = isCouplePlan && hasCouple && partner;
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
@@ -96,6 +103,7 @@ export function TransactionForm({
       description: '',
       date: new Date(),
       isInstallment: false,
+      ownerType: 'individual',
     },
   });
 
@@ -114,6 +122,7 @@ export function TransactionForm({
         bankAccountId: transaction.bank_account_id || undefined,
         isInstallment: transaction.is_installment || false,
         totalInstallments: transaction.total_installments || undefined,
+        ownerType: (transaction.owner_type as 'individual' | 'partner' | 'shared') || 'individual',
       });
     } else {
       form.reset({
@@ -122,6 +131,7 @@ export function TransactionForm({
         description: '',
         date: new Date(),
         isInstallment: false,
+        ownerType: 'individual',
       });
     }
   }, [transaction, form, open]);
@@ -288,6 +298,50 @@ export function TransactionForm({
                 </FormItem>
               )}
             />
+
+            {/* Owner Type (only for couple plan users) */}
+            {showOwnerField && (
+              <FormField
+                control={form.control}
+                name="ownerType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-primary" />
+                      Responsável
+                    </FormLabel>
+                    <Select value={field.value || 'individual'} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Quem é responsável?" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="individual">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span>{currentMember?.nickname || 'Eu'}</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="partner">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span>{partner?.nickname || 'Parceiro(a)'}</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="shared">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            <span>Ambos (Compartilhado)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Bank Account */}
             <FormField
