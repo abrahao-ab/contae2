@@ -12,6 +12,7 @@ import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { CreditCardForm } from '@/components/cards/CreditCardForm';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useAuth } from '@/hooks/useAuth';
+import { useTransactions } from '@/hooks/useTransactions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Wallet, TrendingUp, TrendingDown, CreditCard, Loader2 } from 'lucide-react';
@@ -42,8 +43,20 @@ interface Category {
   color: string | null;
 }
 
+interface CreditCardData {
+  id: string;
+  name: string;
+  bankName: string;
+  lastFourDigits: string | null;
+  creditLimit: number;
+  currentBalance: number;
+  color: string | null;
+  closing_day: number | null;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
+  const { createTransaction } = useTransactions();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -53,7 +66,7 @@ export default function Dashboard() {
   
   // Data states
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [creditCards, setCreditCards] = useState<any[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCardData[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +126,7 @@ export default function Dashboard() {
           creditLimit: Number(c.credit_limit),
           currentBalance: Number(c.current_balance),
           color: c.color,
+          closing_day: c.closing_day,
         }));
         setCreditCards(formattedCards);
       }
@@ -188,27 +202,24 @@ export default function Dashboard() {
     if (!user) return;
 
     try {
-      const { error } = await supabase.from('transactions').insert({
-        user_id: user.id,
+      // Map creditCards to the format expected by useTransactions hook
+      const cardsForHook = creditCards.map(c => ({
+        id: c.id,
+        name: c.name,
+        closing_day: c.closing_day,
+      }));
+
+      await createTransaction(user.id, {
         type: data.type,
-        amount: parseFloat(data.amount),
+        amount: data.amount,
         description: data.description,
-        date: format(data.date, 'yyyy-MM-dd'),
-        category_id: data.categoryId || null,
-        credit_card_id: data.creditCardId || null,
-        bank_account_id: data.bankAccountId || null,
-        is_installment: data.isInstallment,
-        total_installments: data.totalInstallments || null,
-        current_installment: data.isInstallment ? 1 : null,
-        source: 'web',
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Sucesso!',
-        description: 'Transação registrada com sucesso.',
-      });
+        date: data.date,
+        categoryId: data.categoryId,
+        creditCardId: data.creditCardId,
+        bankAccountId: data.bankAccountId,
+        isInstallment: data.isInstallment,
+        totalInstallments: data.totalInstallments,
+      }, cardsForHook);
 
       fetchData();
     } catch (error: any) {
