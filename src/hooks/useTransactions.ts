@@ -7,6 +7,7 @@ interface CreditCard {
   id: string;
   name: string;
   closing_day: number | null;
+  due_day?: number | null;
 }
 
 interface CreateTransactionData {
@@ -36,18 +37,43 @@ const formatCurrency = (value: number) => {
 };
 
 export function useTransactions() {
-  const getFirstInstallmentDate = (transactionDate: Date, closingDay: number | null): Date => {
+  /**
+   * Calcula a data de vencimento da fatura para uma compra no cartão
+   * - Se a compra foi antes do fechamento: vai para a fatura atual (vence no mês seguinte)
+   * - Se a compra foi após o fechamento: vai para a próxima fatura (vence dois meses depois)
+   */
+  const getInvoiceDueDate = (
+    transactionDate: Date, 
+    closingDay: number | null, 
+    dueDay: number | null
+  ): Date => {
     const closingDayValue = closingDay || 1;
+    const dueDayValue = dueDay || 10;
     
-    // Start with the transaction date
-    let firstDate = new Date(transactionDate);
+    const purchaseDay = transactionDate.getDate();
+    const purchaseMonth = transactionDate.getMonth();
+    const purchaseYear = transactionDate.getFullYear();
     
-    // If the transaction day is after closing day, first installment goes to next month's invoice
-    if (transactionDate.getDate() > closingDayValue) {
-      firstDate.setMonth(firstDate.getMonth() + 1);
+    let dueMonth: number;
+    let dueYear: number;
+    
+    if (purchaseDay <= closingDayValue) {
+      // Compra antes do fechamento: fatura vence no mês seguinte
+      dueMonth = purchaseMonth + 1;
+      dueYear = purchaseYear;
+    } else {
+      // Compra após o fechamento: fatura vence dois meses depois
+      dueMonth = purchaseMonth + 2;
+      dueYear = purchaseYear;
     }
     
-    return firstDate;
+    // Ajustar ano se o mês passou de dezembro
+    if (dueMonth > 11) {
+      dueYear += Math.floor(dueMonth / 12);
+      dueMonth = dueMonth % 12;
+    }
+    
+    return new Date(dueYear, dueMonth, dueDayValue);
   };
 
   const createTransaction = useCallback(async (
@@ -60,20 +86,26 @@ export function useTransactions() {
     const totalInstallments = isInstallment ? data.totalInstallments : null;
     const installmentAmount = isInstallment && totalInstallments ? totalAmount / totalInstallments : totalAmount;
 
-    // Get credit card closing day if a card is selected
+    // Get credit card info if a card is selected
     let closingDay: number | null = null;
+    let dueDay: number | null = null;
+    const isCreditCardExpense = data.creditCardId && data.type === 'expense';
+    
     if (data.creditCardId) {
       const selectedCard = creditCards.find(c => c.id === data.creditCardId);
       closingDay = selectedCard?.closing_day || null;
+      dueDay = selectedCard?.due_day || null;
     }
 
     // If installment, create multiple transactions (one per month)
     if (isInstallment && totalInstallments) {
       const transactionsToInsert = [];
-      const baseDate = getFirstInstallmentDate(new Date(data.date), closingDay);
+      const firstDueDate = isCreditCardExpense 
+        ? getInvoiceDueDate(new Date(data.date), closingDay, dueDay)
+        : new Date(data.date);
 
       for (let i = 0; i < totalInstallments; i++) {
-        const installmentDate = new Date(baseDate);
+        const installmentDate = new Date(firstDueDate);
         installmentDate.setMonth(installmentDate.getMonth() + i);
 
         transactionsToInsert.push({
@@ -95,13 +127,17 @@ export function useTransactions() {
       const { error } = await supabase.from('transactions').insert(transactionsToInsert);
       if (error) throw error;
     } else {
-      // Single transaction
+      // Single transaction - use due date if credit card expense
+      const transactionDate = isCreditCardExpense
+        ? getInvoiceDueDate(new Date(data.date), closingDay, dueDay)
+        : data.date;
+
       const transactionData = {
         user_id: userId,
         type: data.type,
         amount: totalAmount,
         description: data.description,
-        date: format(data.date, 'yyyy-MM-dd'),
+        date: format(transactionDate, 'yyyy-MM-dd'),
         category_id: data.categoryId || null,
         credit_card_id: data.creditCardId || null,
         bank_account_id: data.bankAccountId || null,

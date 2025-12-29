@@ -52,6 +52,7 @@ interface CreditCard {
   id: string;
   name: string;
   closing_day: number | null;
+  due_day: number | null;
 }
 
 interface BankAccount {
@@ -113,7 +114,7 @@ export default function Transactions() {
           .order('name'),
         supabase
           .from('credit_cards')
-          .select('id, name, closing_day')
+          .select('id, name, closing_day, due_day')
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('name'),

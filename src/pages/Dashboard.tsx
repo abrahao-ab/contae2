@@ -52,6 +52,7 @@ interface CreditCardData {
   currentBalance: number;
   color: string | null;
   closing_day: number | null;
+  due_day: number | null;
 }
 
 export default function Dashboard() {
@@ -127,6 +128,7 @@ export default function Dashboard() {
           currentBalance: Number(c.current_balance),
           color: c.color,
           closing_day: c.closing_day,
+          due_day: c.due_day,
         }));
         setCreditCards(formattedCards);
       }
