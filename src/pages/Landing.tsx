@@ -539,13 +539,13 @@ const Landing = () => {
               <Card className="bg-card border-border h-full">
                 <CardContent className="p-8">
                   <h3 className="text-xl font-semibold text-foreground mb-2">Gratuito</h3>
-                  <p className="text-muted-foreground mb-6">Para começar a organizar</p>
+                  <p className="text-muted-foreground mb-6">Para começar a organizar suas finanças</p>
                   <div className="mb-6">
                     <span className="text-4xl font-bold text-foreground">R$ 0</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {['50 transações/mês', '1 cartão de crédito', 'Dashboard básico', 'WhatsApp texto'].map((item, i) => (
+                    {['Controle de gastos básico', '1 número WhatsApp', 'Categorias padrão', 'Relatórios simples'].map((item, i) => (
                       <motion.li 
                         key={i}
                         className="flex items-center gap-2 text-foreground"
@@ -568,7 +568,7 @@ const Landing = () => {
               </Card>
             </motion.div>
             
-            {/* Pro Plan */}
+            {/* Premium Plan */}
             <motion.div variants={scaleIn}>
               <Card className="bg-card border-primary relative h-full">
                 <motion.div 
@@ -577,18 +577,18 @@ const Landing = () => {
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   <span className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1 rounded-full">
-                    Popular
+                    Mais Popular
                   </span>
                 </motion.div>
                 <CardContent className="p-8">
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Pro</h3>
-                  <p className="text-muted-foreground mb-6">Para controle completo</p>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">Premium</h3>
+                  <p className="text-muted-foreground mb-6">Para quem quer o controle completo</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-foreground">R$ 19</span>
+                    <span className="text-4xl font-bold text-foreground">R$ 19,90</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {['Transações ilimitadas', 'Cartões ilimitados', 'Dashboard completo', 'WhatsApp voz + foto', 'Projeções de gastos'].map((item, i) => (
+                    {['Tudo do plano Gratuito', 'IA para classificação automática', 'Análise comportamental', 'Projeções financeiras', 'Alertas inteligentes', 'Suporte prioritário'].map((item, i) => (
                       <motion.li 
                         key={i}
                         className="flex items-center gap-2 text-foreground"
@@ -604,25 +604,25 @@ const Landing = () => {
                   </ul>
                   <Link to="/login" className="block">
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                      <Button className="w-full bg-primary hover:bg-primary/90">Assinar Pro</Button>
+                      <Button className="w-full bg-primary hover:bg-primary/90">Assinar Premium</Button>
                     </motion.div>
                   </Link>
                 </CardContent>
               </Card>
             </motion.div>
             
-            {/* Business Plan */}
+            {/* Couple Plan */}
             <motion.div variants={fadeInUp}>
               <Card className="bg-card border-border h-full">
                 <CardContent className="p-8">
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Business</h3>
-                  <p className="text-muted-foreground mb-6">Para profissionais</p>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">Casal</h3>
+                  <p className="text-muted-foreground mb-6">Finanças compartilhadas a dois</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-foreground">R$ 49</span>
+                    <span className="text-4xl font-bold text-foreground">R$ 29,90</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {['Tudo do Pro', 'Múltiplos perfis', 'Relatórios avançados', 'API de integração', 'Suporte prioritário'].map((item, i) => (
+                    {['Tudo do plano Premium', '2 números WhatsApp', 'Dashboard compartilhado', 'Metas em conjunto', 'Relatórios comparativos'].map((item, i) => (
                       <motion.li 
                         key={i}
                         className="flex items-center gap-2 text-foreground"
@@ -638,7 +638,7 @@ const Landing = () => {
                   </ul>
                   <Link to="/login" className="block">
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                      <Button variant="outline" className="w-full">Falar com vendas</Button>
+                      <Button variant="outline" className="w-full">Assinar Casal</Button>
                     </motion.div>
                   </Link>
                 </CardContent>

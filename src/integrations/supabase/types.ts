@@ -163,6 +163,48 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          created_at: string
+          description: string
+          features: Json
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          popular: boolean | null
+          price: number
+          price_display: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          features?: Json
+          icon?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+          popular?: boolean | null
+          price?: number
+          price_display: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          features?: Json
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          popular?: boolean | null
+          price?: number
+          price_display?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
