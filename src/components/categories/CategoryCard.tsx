@@ -13,8 +13,9 @@ interface Category {
 
 interface CategoryCardProps {
   category: Category;
-  onEdit: (category: Category) => void;
-  onDelete: (category: Category) => void;
+  onEdit?: (category: Category) => void;
+  onDelete?: (category: Category) => void;
+  readOnly?: boolean;
 }
 
 const getIcon = (iconName: string | null) => {
@@ -42,9 +43,10 @@ const getIcon = (iconName: string | null) => {
   return iconMap[iconName] || LucideIcons.CircleDot;
 };
 
-export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) {
+export function CategoryCard({ category, onEdit, onDelete, readOnly = false }: CategoryCardProps) {
   const IconComponent = getIcon(category.icon);
   const isDefault = category.is_default;
+  const showActions = !readOnly && (onEdit || onDelete);
 
   return (
     <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:shadow-md transition-all group">
@@ -68,29 +70,33 @@ export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) 
         </div>
       </div>
 
-      <div className={cn(
-        'flex items-center gap-1 transition-opacity',
-        'opacity-0 group-hover:opacity-100'
-      )}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-          onClick={() => onEdit(category)}
-        >
-          <Pencil className="w-4 h-4" />
-        </Button>
-        {!isDefault && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-expense"
-            onClick={() => onDelete(category)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+      {showActions && (
+        <div className={cn(
+          'flex items-center gap-1 transition-opacity',
+          'opacity-0 group-hover:opacity-100'
+        )}>
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={() => onEdit(category)}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+          )}
+          {onDelete && !isDefault && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-expense"
+              onClick={() => onDelete(category)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
