@@ -16,6 +16,17 @@ export function AuthForm() {
   const [phone, setPhone] = useState('');
   const { signIn, signUp } = useAuth();
 
+  const formatPhoneInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhoneInput(e.target.value));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -96,15 +107,16 @@ export function AuthForm() {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="5511999999999"
+                        placeholder="(00) 00000-0000"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        onChange={handlePhoneChange}
+                        maxLength={15}
                         className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
                         required={!isLogin}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Código do país + DDD + número (ex: 5511999999999)
+                      Número com DDD (ex: (11) 99999-9999)
                     </p>
                   </div>
                 </>
