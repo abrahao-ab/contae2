@@ -45,34 +45,34 @@ export function StatCard({ title, value, icon, trend, variant = 'default', class
   };
 
   return (
-    <Card className={cn('border overflow-hidden transition-all duration-300 hover:shadow-lg', variants[variant], className)}>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1.5">
-            <p className={cn('text-sm font-medium', subtextVariants[variant])}>
+    <Card className={cn('border overflow-hidden transition-all duration-300 hover:shadow-md active:scale-[0.98]', variants[variant], className)}>
+      <CardContent className="p-3 sm:p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1 min-w-0 flex-1">
+            <p className={cn('text-xs sm:text-sm font-medium truncate', subtextVariants[variant])}>
               {title}
             </p>
-            <p className={cn('text-2xl lg:text-3xl font-bold tracking-tight', textVariants[variant])}>
+            <p className={cn('text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight', textVariants[variant])}>
               {value}
             </p>
             {trend && (
               <div className={cn(
-                'flex items-center gap-1 text-sm font-medium mt-2',
+                'flex items-center gap-1 text-xs sm:text-sm font-medium mt-1 sm:mt-2',
                 trend.isPositive ? 'text-success' : 'text-destructive'
               )}>
                 {trend.isPositive ? (
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
                 ) : (
-                  <TrendingDown className="w-4 h-4" />
+                  <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />
                 )}
                 <span>{trend.value}%</span>
-                <span className={cn('font-normal', subtextVariants[variant])}>
+                <span className={cn('font-normal hidden sm:inline', subtextVariants[variant])}>
                   vs mês anterior
                 </span>
               </div>
             )}
           </div>
-          <div className={cn('p-3 rounded-xl', iconBgVariants[variant])}>
+          <div className={cn('p-2 sm:p-3 rounded-lg sm:rounded-xl flex-shrink-0', iconBgVariants[variant])}>
             {icon}
           </div>
         </div>
