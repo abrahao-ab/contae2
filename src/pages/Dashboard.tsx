@@ -235,6 +235,11 @@ export default function Dashboard() {
         closing_day: c.closing_day,
       }));
 
+      // Determine coupleId based on ownerType
+      const coupleId = (data.ownerType === 'shared' || data.ownerType === 'partner') && couple
+        ? couple.id
+        : undefined;
+
       await createTransaction(user.id, {
         type: data.type,
         amount: data.amount,
@@ -245,6 +250,8 @@ export default function Dashboard() {
         bankAccountId: data.bankAccountId,
         isInstallment: data.isInstallment,
         totalInstallments: data.totalInstallments,
+        ownerType: data.ownerType,
+        coupleId,
       }, cardsForHook);
 
       fetchData();

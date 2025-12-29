@@ -20,6 +20,8 @@ interface CreateTransactionData {
   bankAccountId?: string;
   isInstallment?: boolean;
   totalInstallments?: number;
+  ownerType?: 'individual' | 'partner' | 'shared';
+  coupleId?: string;
 }
 
 interface TransactionWithCard {
@@ -144,6 +146,8 @@ export function useTransactions() {
           total_installments: totalInstallments,
           current_installment: 1,
           source: 'web' as const,
+          couple_id: data.coupleId || null,
+          owner_type: (data.ownerType === 'shared' ? 'shared' : 'individual') as 'individual' | 'shared',
         })
         .select('id')
         .single();
@@ -180,6 +184,8 @@ export function useTransactions() {
             current_installment: i + 1,
             parent_transaction_id: parentId,
             source: 'web' as const,
+            couple_id: data.coupleId || null,
+            owner_type: (data.ownerType === 'shared' ? 'shared' : 'individual') as 'individual' | 'shared',
           });
         }
 
@@ -206,6 +212,8 @@ export function useTransactions() {
         total_installments: null,
         current_installment: null,
         source: 'web' as const,
+        couple_id: data.coupleId || null,
+        owner_type: (data.ownerType === 'shared' ? 'shared' : 'individual') as 'individual' | 'shared',
       };
 
       const { error } = await supabase.from('transactions').insert(transactionData);
