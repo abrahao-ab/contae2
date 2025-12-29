@@ -6,9 +6,12 @@ import { DeleteCategoryDialog } from '@/components/categories/DeleteCategoryDial
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { useFeatureCheck } from '@/components/upgrade/FeatureGate';
+import { UpgradeBanner } from '@/components/upgrade/UpgradeBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Search, Tags, Loader2 } from 'lucide-react';
+import { Plus, Search, Tags, Loader2, Lock } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -22,6 +25,8 @@ interface Category {
 
 export default function Categories() {
   const { user } = useAuth();
+  const { isFree, canAccess } = usePlanLimits();
+  const { checkAndShowUpgrade, UpgradeDialogComponent } = useFeatureCheck();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,6 +38,8 @@ export default function Categories() {
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+
+  const canCustomizeCategories = canAccess('can_customize_categories');
 
   const fetchCategories = async () => {
     if (!user) return;
@@ -62,6 +69,13 @@ export default function Categories() {
   useEffect(() => {
     fetchCategories();
   }, [user]);
+
+  const handleCreateClick = () => {
+    if (!checkAndShowUpgrade('can_customize_categories')) {
+      return;
+    }
+    setFormOpen(true);
+  };
 
   const handleCreate = async (data: { name: string; icon: string; color: string }) => {
     if (!user) return;
@@ -164,11 +178,25 @@ export default function Categories() {
   };
 
   const openEditForm = (category: Category) => {
+    // Only allow editing non-default categories for free users
+    if (category.is_default && isFree()) {
+      if (!checkAndShowUpgrade('can_customize_categories')) {
+        return;
+      }
+    }
     setEditingCategory(category);
     setFormOpen(true);
   };
 
   const openDeleteDialog = (category: Category) => {
+    if (category.is_default) {
+      toast({
+        title: 'Ação não permitida',
+        description: 'Categorias padrão não podem ser excluídas.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setDeletingCategory(category);
     setDeleteDialogOpen(true);
   };
@@ -194,11 +222,33 @@ export default function Categories() {
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Categorias</h1>
             <p className="text-muted-foreground">Organize seus gastos por categoria</p>
           </div>
-          <Button onClick={() => setFormOpen(true)} className="bg-primary text-white hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Categoria
+          <Button 
+            onClick={handleCreateClick} 
+            className="bg-primary text-white hover:bg-primary/90"
+            disabled={!canCustomizeCategories && isFree()}
+          >
+            {!canCustomizeCategories && isFree() ? (
+              <>
+                <Lock className="w-4 h-4 mr-2" />
+                Nova Categoria
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Categoria
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Upgrade Banner for Free Users */}
+        {isFree() && (
+          <UpgradeBanner
+            feature="categorias personalizadas"
+            description="No plano gratuito, você só pode usar as categorias padrão. Faça upgrade para criar e personalizar suas próprias categorias!"
+            dismissible
+          />
+        )}
 
         {/* Search */}
         <div className="relative max-w-md">
@@ -223,7 +273,7 @@ export default function Categories() {
             <p className="text-sm mt-1">
               {searchQuery ? 'Tente buscar por outro termo' : 'Crie sua primeira categoria'}
             </p>
-            {!searchQuery && (
+            {!searchQuery && canCustomizeCategories && (
               <Button onClick={() => setFormOpen(true)} className="mt-4 bg-primary text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Categoria
@@ -237,14 +287,16 @@ export default function Categories() {
               <div className="space-y-3">
                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   Categorias Padrão ({defaultCategories.length})
+                  {isFree() && <span className="ml-2 text-xs normal-case">(somente leitura no plano gratuito)</span>}
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {defaultCategories.map((category) => (
                     <CategoryCard
                       key={category.id}
                       category={category}
-                      onEdit={openEditForm}
-                      onDelete={openDeleteDialog}
+                      onEdit={canCustomizeCategories ? openEditForm : undefined}
+                      onDelete={canCustomizeCategories ? openDeleteDialog : undefined}
+                      readOnly={isFree()}
                     />
                   ))}
                 </div>
@@ -290,6 +342,8 @@ export default function Categories() {
         onConfirm={handleDelete}
         category={deletingCategory}
       />
+
+      <UpgradeDialogComponent />
     </DashboardLayout>
   );
 }
