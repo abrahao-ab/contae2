@@ -27,6 +27,9 @@ interface TransactionWithCard {
   type: 'income' | 'expense';
   amount: number;
   credit_card_id: string | null;
+  is_installment?: boolean | null;
+  total_installments?: number | null;
+  parent_transaction_id?: string | null;
 }
 
 const formatCurrency = (value: number) => {
@@ -102,11 +105,14 @@ export function useTransactions() {
 
     // If installment, create multiple transactions (one per month)
     if (isInstallment && totalInstallments) {
-      const transactionsToInsert = [];
       const firstDueDate = isCreditCardExpense 
         ? getInvoiceDueDate(new Date(data.date), closingDay, dueDay)
         : new Date(data.date);
 
+      // Generate a unique group ID for this installment set
+      const groupId = crypto.randomUUID();
+
+      const transactionsToInsert = [];
       for (let i = 0; i < totalInstallments; i++) {
         const installmentDate = new Date(firstDueDate);
         installmentDate.setMonth(installmentDate.getMonth() + i);
@@ -124,6 +130,7 @@ export function useTransactions() {
           is_installment: true,
           total_installments: totalInstallments,
           current_installment: i + 1,
+          parent_transaction_id: groupId, // Link all installments together
           source: 'web' as const,
         });
       }
@@ -250,36 +257,86 @@ export function useTransactions() {
 
   const deleteTransaction = useCallback(async (
     userId: string,
-    transaction: TransactionWithCard
+    transaction: TransactionWithCard,
+    deleteAllInstallments: boolean = true
   ) => {
-    // If credit card was used, restore the balance
-    if (transaction.credit_card_id && transaction.type === 'expense') {
-      const { data: cardData } = await supabase
-        .from('credit_cards')
-        .select('current_balance')
-        .eq('id', transaction.credit_card_id)
-        .single();
+    // Check if this is an installment transaction
+    const isInstallment = transaction.is_installment && transaction.parent_transaction_id;
+    
+    if (isInstallment && deleteAllInstallments && transaction.parent_transaction_id) {
+      // Get all related installments to calculate total amount for credit card balance
+      const { data: allInstallments } = await supabase
+        .from('transactions')
+        .select('id, amount, credit_card_id, type')
+        .eq('parent_transaction_id', transaction.parent_transaction_id)
+        .eq('user_id', userId);
 
-      if (cardData) {
-        await supabase
-          .from('credit_cards')
-          .update({ current_balance: Math.max(0, cardData.current_balance - transaction.amount) })
-          .eq('id', transaction.credit_card_id);
+      if (allInstallments && allInstallments.length > 0) {
+        // Calculate total amount to restore to credit card
+        const totalAmount = allInstallments.reduce((sum, t) => sum + Number(t.amount), 0);
+        const creditCardId = allInstallments[0].credit_card_id;
+        const transactionType = allInstallments[0].type;
+
+        // Restore credit card balance if applicable
+        if (creditCardId && transactionType === 'expense') {
+          const { data: cardData } = await supabase
+            .from('credit_cards')
+            .select('current_balance')
+            .eq('id', creditCardId)
+            .single();
+
+          if (cardData) {
+            await supabase
+              .from('credit_cards')
+              .update({ current_balance: Math.max(0, cardData.current_balance - totalAmount) })
+              .eq('id', creditCardId);
+          }
+        }
+
+        // Delete all installments
+        const { error } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('parent_transaction_id', transaction.parent_transaction_id)
+          .eq('user_id', userId);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Parcelas excluídas',
+          description: `${allInstallments.length} parcelas foram removidas.`,
+        });
       }
+    } else {
+      // Single transaction or delete only this installment
+      if (transaction.credit_card_id && transaction.type === 'expense') {
+        const { data: cardData } = await supabase
+          .from('credit_cards')
+          .select('current_balance')
+          .eq('id', transaction.credit_card_id)
+          .single();
+
+        if (cardData) {
+          await supabase
+            .from('credit_cards')
+            .update({ current_balance: Math.max(0, cardData.current_balance - transaction.amount) })
+            .eq('id', transaction.credit_card_id);
+        }
+      }
+
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transaction.id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Transação excluída',
+        description: 'A transação foi removida.',
+      });
     }
-
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', transaction.id)
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
-    toast({
-      title: 'Transação excluída',
-      description: 'A transação foi removida.',
-    });
   }, []);
 
   return {

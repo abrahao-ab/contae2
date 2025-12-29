@@ -27,6 +27,7 @@ interface Transaction {
   is_installment: boolean | null;
   current_installment: number | null;
   total_installments: number | null;
+  parent_transaction_id: string | null;
   category: {
     id: string;
     name: string;
@@ -100,6 +101,7 @@ export default function Transactions() {
             id, type, amount, description, date,
             category_id, credit_card_id, bank_account_id,
             is_installment, current_installment, total_installments,
+            parent_transaction_id,
             category:categories(id, name, icon, color),
             credit_card:credit_cards(id, name),
             bank_account:bank_accounts(id, name)
@@ -229,6 +231,9 @@ export default function Transactions() {
         type: deletingTransaction.type,
         amount: deletingTransaction.amount,
         credit_card_id: deletingTransaction.credit_card_id,
+        is_installment: deletingTransaction.is_installment,
+        total_installments: deletingTransaction.total_installments,
+        parent_transaction_id: deletingTransaction.parent_transaction_id,
       });
 
       setDeletingTransaction(null);
