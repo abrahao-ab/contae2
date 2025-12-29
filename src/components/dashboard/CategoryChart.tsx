@@ -103,7 +103,7 @@ export function CategoryChart({ transactions, categories, type }: CategoryChartP
   }
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" id={`category-chart-${type}`}>
       <CardHeader>
         <CardTitle className="text-foreground text-lg">{title}</CardTitle>
       </CardHeader>
