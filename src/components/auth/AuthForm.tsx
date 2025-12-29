@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Wallet, Mail, Lock, User } from 'lucide-react';
+import { Loader2, Wallet, Mail, Lock, User, Phone } from 'lucide-react';
 
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +13,7 @@ export function AuthForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +29,7 @@ export function AuthForm() {
           description: 'Login realizado com sucesso.',
         });
       } else {
-        const { error } = await signUp(email, password, fullName);
+        const { error } = await signUp(email, password, fullName, phone);
         if (error) throw error;
         toast({
           title: 'Conta criada!',
@@ -71,21 +72,42 @@ export function AuthForm() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-foreground">Nome completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
-                      required={!isLogin}
-                    />
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-foreground">Nome completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="fullName"
+                        type="text"
+                        placeholder="Seu nome"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
+                        required={!isLogin}
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-foreground">WhatsApp</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="5511999999999"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
+                        required={!isLogin}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Código do país + DDD + número (ex: 5511999999999)
+                    </p>
+                  </div>
+                </>
               )}
 
               <div className="space-y-2">
