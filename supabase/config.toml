@@ -1,1 +1,16 @@
 project_id = "eiezckbfjwmrluloxusv"
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.get-summary]
+verify_jwt = false
+
+[functions.list-transactions]
+verify_jwt = false
+
+[functions.create-transaction]
+verify_jwt = false
+
+[functions.delete-transaction]
+verify_jwt = false
