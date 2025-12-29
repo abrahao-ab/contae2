@@ -585,13 +585,20 @@ const Landing = () => {
               <Card className="bg-card border-border h-full">
                 <CardContent className="p-8">
                   <h3 className="text-xl font-semibold text-foreground mb-2">Gratuito</h3>
-                  <p className="text-muted-foreground mb-6">Para começar a organizar suas finanças</p>
+                  <p className="text-muted-foreground mb-6">Ideal para quem quer começar a se organizar</p>
                   <div className="mb-6">
                     <span className="text-4xl font-bold text-foreground">R$ 0</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {['Controle de gastos básico', '1 número WhatsApp', 'Categorias padrão', 'Relatórios simples'].map((item, i) => (
+                    {[
+                      '1 número de WhatsApp vinculado',
+                      'Registro manual via WhatsApp',
+                      'Dashboard básico',
+                      'Relatório mensal simples',
+                      'Categorias de gastos básicas',
+                      'Acesso ao painel web'
+                    ].map((item, i) => (
                       <motion.li 
                         key={i}
                         className="flex items-center gap-2 text-foreground"
@@ -628,7 +635,7 @@ const Landing = () => {
                 </motion.div>
                 <CardContent className="p-8">
                   <h3 className="text-xl font-semibold text-foreground mb-2">Premium</h3>
-                  <p className="text-muted-foreground mb-6">Para quem quer o controle completo</p>
+                  <p className="text-muted-foreground mb-6">Controle real do dinheiro no dia a dia</p>
                   <div className="mb-6">
                     {isAnnual ? (
                       <>
@@ -654,7 +661,17 @@ const Landing = () => {
                     )}
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {['Tudo do plano Gratuito', 'IA para classificação automática', 'Análise comportamental', 'Projeções financeiras', 'Alertas inteligentes', 'Suporte prioritário'].map((item, i) => (
+                    {[
+                      'Tudo do plano Gratuito',
+                      'Transações ilimitadas via WhatsApp',
+                      'Relatórios mensais detalhados (PDF)',
+                      'Relatórios por categoria',
+                      'Filtro por período',
+                      'Exportação de relatórios',
+                      'Alertas de gastos excessivos',
+                      'Histórico financeiro completo',
+                      'Suporte prioritário'
+                    ].map((item, i) => (
                       <motion.li 
                         key={i}
                         className="flex items-center gap-2 text-foreground"
@@ -681,8 +698,8 @@ const Landing = () => {
             <motion.div variants={fadeInUp}>
               <Card className="bg-card border-border h-full">
                 <CardContent className="p-8">
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Casal</h3>
-                  <p className="text-muted-foreground mb-6">Finanças compartilhadas a dois</p>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">Conta Casal</h3>
+                  <p className="text-muted-foreground mb-6">Organize a vida financeira juntos</p>
                   <div className="mb-6">
                     {isAnnual ? (
                       <>
@@ -708,7 +725,15 @@ const Landing = () => {
                     )}
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {['Tudo do plano Premium', '2 números WhatsApp', 'Dashboard compartilhado', 'Metas em conjunto', 'Relatórios comparativos'].map((item, i) => (
+                    {[
+                      'Tudo do plano Premium',
+                      '2 números de WhatsApp vinculados',
+                      '2 perfis (individual + conjunta)',
+                      'Despesas individuais e compartilhadas',
+                      'Metas financeiras do casal',
+                      'Relatórios individuais e do casal',
+                      'Alertas de gastos fora do combinado'
+                    ].map((item, i) => (
                       <motion.li 
                         key={i}
                         className="flex items-center gap-2 text-foreground"
