@@ -156,7 +156,7 @@ export function Sidebar() {
 
         {/* User Section */}
         <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
-          {isCouplePlan && hasCouple && (
+          {isCouplePlan && (
             <NavLink
               to="/settings/couple"
               onClick={closeMobileMenu}

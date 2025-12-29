@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { BottomNavigation } from './BottomNavigation';
 import { ThemeToggle } from './ThemeToggle';
+import { CoupleInviteChecker } from '@/components/couple/CoupleInviteChecker';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,6 +13,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <Sidebar />
+      
+      {/* Couple Invite Checker */}
+      <CoupleInviteChecker />
       
       {/* Main content */}
       <main className="lg:pl-64 min-h-screen flex flex-col">
