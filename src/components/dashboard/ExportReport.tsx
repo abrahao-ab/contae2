@@ -6,13 +6,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Loader2, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { UpgradeDialog } from '@/components/upgrade/UpgradeDialog';
 
 interface Transaction {
   id: string;
@@ -71,6 +73,8 @@ const captureChart = async (elementId: string): Promise<string | null> => {
 
 export function ExportReport({ transactions, categories, dateRange, stats }: ExportReportProps) {
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const { canAccess, isFree } = usePlanLimits();
 
   const getPeriodString = () => {
     if (!dateRange.from || !dateRange.to) return 'Período não definido';
@@ -496,36 +500,60 @@ export function ExportReport({ transactions, categories, dateRange, stats }: Exp
     }
   };
 
+  const canExport = canAccess('can_export');
+
+  const handleExportClick = (exportFn: () => Promise<void>) => {
+    if (!canExport) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+    exportFn();
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          {exporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          Exportar Relatório
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={exportToExcel}
-          disabled={exporting !== null}
-          className="gap-2 cursor-pointer"
-        >
-          <FileSpreadsheet className="h-4 w-4 text-green-600" />
-          Baixar Excel (.xlsx)
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={exportToPDF}
-          disabled={exporting !== null}
-          className="gap-2 cursor-pointer"
-        >
-          <FileText className="h-4 w-4 text-red-600" />
-          Baixar PDF
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="gap-2">
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isFree() ? (
+              <Lock className="h-4 w-4" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Exportar Relatório
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => handleExportClick(exportToExcel)}
+            disabled={exporting !== null}
+            className="gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-green-600" />
+            Baixar Excel (.xlsx)
+            {!canExport && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => handleExportClick(exportToPDF)}
+            disabled={exporting !== null}
+            className="gap-2 cursor-pointer"
+          >
+            <FileText className="h-4 w-4 text-red-600" />
+            Baixar PDF
+            {!canExport && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        feature="Exportação de Relatórios"
+        featureDescription="Exporte seus relatórios financeiros em Excel e PDF para análise detalhada."
+        requiredPlan="paid"
+      />
+    </>
   );
 }
