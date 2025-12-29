@@ -130,10 +130,10 @@ const Landing = () => {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400 }}
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Wallet className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl text-foreground">FinanceIA</span>
+            <span className="font-bold text-xl text-foreground">Contaê</span>
           </motion.div>
           <nav className="hidden md:flex items-center gap-8">
             {['features', 'how-it-works', 'pricing'].map((item, i) => (
@@ -439,14 +439,14 @@ const Landing = () => {
             >
               <div className="flex items-center gap-3 pb-4 border-b border-border">
                 <motion.div 
-                  className="w-10 h-10 rounded-full bg-success flex items-center justify-center"
+                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center"
                   animate={{ scale: [1, 1.1, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <MessageSquare className="w-5 h-5 text-white" />
+                  <MessageSquare className="w-5 h-5 text-primary-foreground" />
                 </motion.div>
                 <div>
-                  <p className="font-semibold text-foreground">FinanceIA Bot</p>
+                  <p className="font-semibold text-foreground">Contaê Bot</p>
                   <p className="text-xs text-muted-foreground">Online</p>
                 </div>
               </div>
@@ -709,10 +709,10 @@ const Landing = () => {
               className="flex items-center gap-2"
               whileHover={{ scale: 1.05 }}
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-xl text-foreground">FinanceIA</span>
+              <span className="font-bold text-xl text-foreground">Contaê</span>
             </motion.div>
             <nav className="flex items-center gap-6 text-sm">
               {['Termos', 'Privacidade', 'Suporte'].map((item) => (
@@ -727,7 +727,7 @@ const Landing = () => {
               ))}
             </nav>
             <p className="text-sm text-muted-foreground">
-              © 2024 FinanceIA. Todos os direitos reservados.
+              © 2024 Contaê. Todos os direitos reservados.
             </p>
           </div>
         </div>

@@ -18,37 +18,37 @@ interface StatCardProps {
 export function StatCard({ title, value, icon, trend, variant = 'default', className }: StatCardProps) {
   const variants = {
     default: 'bg-card border-border',
-    income: 'bg-card border-l-4 border-l-income border-border',
-    expense: 'bg-card border-l-4 border-l-expense border-border',
-    primary: 'gradient-primary border-transparent',
+    income: 'bg-card border-l-4 border-l-success border-border',
+    expense: 'bg-card border-l-4 border-l-destructive border-border',
+    primary: 'bg-primary border-primary',
   };
 
   const iconBgVariants = {
     default: 'bg-muted text-muted-foreground',
-    income: 'bg-income/10 text-income',
-    expense: 'bg-expense/10 text-expense',
-    primary: 'bg-white/20 text-white',
+    income: 'bg-success/15 text-success',
+    expense: 'bg-destructive/15 text-destructive',
+    primary: 'bg-primary-foreground/20 text-primary-foreground',
   };
 
   const textVariants = {
     default: 'text-card-foreground',
     income: 'text-card-foreground',
     expense: 'text-card-foreground',
-    primary: 'text-white',
+    primary: 'text-primary-foreground',
   };
 
   const subtextVariants = {
     default: 'text-muted-foreground',
     income: 'text-muted-foreground',
     expense: 'text-muted-foreground',
-    primary: 'text-white/70',
+    primary: 'text-primary-foreground/80',
   };
 
   return (
     <Card className={cn('border overflow-hidden transition-all duration-300 hover:shadow-lg', variants[variant], className)}>
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-start justify-between">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className={cn('text-sm font-medium', subtextVariants[variant])}>
               {title}
             </p>
@@ -57,8 +57,8 @@ export function StatCard({ title, value, icon, trend, variant = 'default', class
             </p>
             {trend && (
               <div className={cn(
-                'flex items-center gap-1 text-sm font-medium',
-                trend.isPositive ? 'text-income' : 'text-expense'
+                'flex items-center gap-1 text-sm font-medium mt-2',
+                trend.isPositive ? 'text-success' : 'text-destructive'
               )}>
                 {trend.isPositive ? (
                   <TrendingUp className="w-4 h-4" />
