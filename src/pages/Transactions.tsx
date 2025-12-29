@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionCard } from '@/components/transactions/TransactionCard';
 import { TransactionFilters } from '@/components/transactions/TransactionFilters';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -83,7 +84,7 @@ export default function Transactions() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
@@ -138,7 +139,15 @@ export default function Transactions() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  const handleRefresh = useCallback(async () => {
+    await fetchData();
+    toast({
+      title: 'Atualizado',
+      description: 'Dados atualizados com sucesso.',
+    });
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -317,128 +326,130 @@ export default function Transactions() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pt-12 lg:pt-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Transações</h1>
-            <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
-          </div>
-          <Button 
-            onClick={() => setFormOpen(true)} 
-            className="bg-primary hover:bg-primary/90 gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Transação
-          </Button>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-income/20 flex items-center justify-center">
-                <ArrowUpRight className="w-5 h-5 text-income" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Receitas</p>
-                <p className="text-xl font-bold text-income">{formatCurrency(summary.income)}</p>
-              </div>
+      <PullToRefresh onRefresh={handleRefresh} className="min-h-full">
+        <div className="space-y-4 sm:space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="space-y-1">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Transações</h1>
+              <p className="text-sm text-muted-foreground">Gerencie suas receitas e despesas</p>
             </div>
-          </div>
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-expense/20 flex items-center justify-center">
-                <ArrowDownRight className="w-5 h-5 text-expense" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Despesas</p>
-                <p className="text-xl font-bold text-expense">{formatCurrency(summary.expense)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 rounded-xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${summary.balance >= 0 ? 'bg-income/20' : 'bg-expense/20'}`}>
-                <Receipt className={`w-5 h-5 ${summary.balance >= 0 ? 'text-income' : 'text-expense'}`} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Saldo</p>
-                <p className={`text-xl font-bold ${summary.balance >= 0 ? 'text-income' : 'text-expense'}`}>
-                  {formatCurrency(summary.balance)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <TransactionFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          typeFilter={typeFilter}
-          onTypeChange={setTypeFilter}
-          categoryFilter={categoryFilter}
-          onCategoryChange={setCategoryFilter}
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-          categories={categories}
-          onClearFilters={clearFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
-
-        {/* Content */}
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl border border-border">
-            <Receipt className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium text-foreground mb-2">Nenhuma transação registrada</p>
-            <p className="text-muted-foreground mb-4">Comece registrando sua primeira transação</p>
             <Button 
               onClick={() => setFormOpen(true)} 
-              className="bg-primary hover:bg-primary/90 gap-2"
+              className="bg-primary hover:bg-primary/90 gap-2 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               Nova Transação
             </Button>
           </div>
-        ) : filteredTransactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl border border-border">
-            <Receipt className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</p>
-            <p className="text-muted-foreground">Tente ajustar os filtros</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {groupedTransactions.map(([dateKey, dayTransactions]) => (
-              <div key={dateKey} className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    {format(new Date(dateKey), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                  </h3>
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-sm text-muted-foreground">
-                    {dayTransactions.length} {dayTransactions.length === 1 ? 'transação' : 'transações'}
-                  </span>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="p-3 sm:p-4 rounded-xl bg-card border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-income/20 flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-income" />
                 </div>
-                <div className="space-y-2">
-                  {dayTransactions.map((transaction) => (
-                    <TransactionCard
-                      key={transaction.id}
-                      transaction={transaction}
-                      onEdit={openEditForm}
-                      onDelete={openDeleteDialog}
-                    />
-                  ))}
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Receitas</p>
+                  <p className="text-sm sm:text-xl font-bold text-income">{formatCurrency(summary.income)}</p>
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="p-3 sm:p-4 rounded-xl bg-card border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-expense/20 flex items-center justify-center">
+                  <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5 text-expense" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Despesas</p>
+                  <p className="text-sm sm:text-xl font-bold text-expense">{formatCurrency(summary.expense)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 sm:p-4 rounded-xl bg-card border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${summary.balance >= 0 ? 'bg-income/20' : 'bg-expense/20'}`}>
+                  <Receipt className={`w-4 h-4 sm:w-5 sm:h-5 ${summary.balance >= 0 ? 'text-income' : 'text-expense'}`} />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Saldo</p>
+                  <p className={`text-sm sm:text-xl font-bold ${summary.balance >= 0 ? 'text-income' : 'text-expense'}`}>
+                    {formatCurrency(summary.balance)}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Filters */}
+          <TransactionFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            typeFilter={typeFilter}
+            onTypeChange={setTypeFilter}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            categories={categories}
+            onClearFilters={clearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl border border-border">
+              <Receipt className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mb-4" />
+              <p className="text-base sm:text-lg font-medium text-foreground mb-2">Nenhuma transação registrada</p>
+              <p className="text-sm text-muted-foreground mb-4 text-center px-4">Comece registrando sua primeira transação</p>
+              <Button 
+                onClick={() => setFormOpen(true)} 
+                className="bg-primary hover:bg-primary/90 gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nova Transação
+              </Button>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl border border-border">
+              <Receipt className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mb-4" />
+              <p className="text-base sm:text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</p>
+              <p className="text-sm text-muted-foreground">Tente ajustar os filtros</p>
+            </div>
+          ) : (
+            <div className="space-y-4 sm:space-y-6">
+              {groupedTransactions.map(([dateKey, dayTransactions]) => (
+                <div key={dateKey} className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <h3 className="text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">
+                      {format(new Date(dateKey), "EEE, dd MMM", { locale: ptBR })}
+                    </h3>
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      {dayTransactions.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {dayTransactions.map((transaction) => (
+                      <TransactionCard
+                        key={transaction.id}
+                        transaction={transaction}
+                        onEdit={openEditForm}
+                        onDelete={openDeleteDialog}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PullToRefresh>
 
       {/* Form Dialog */}
       <TransactionForm

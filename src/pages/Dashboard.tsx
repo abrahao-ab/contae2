@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CreditCardWidget } from '@/components/dashboard/CreditCardWidget';
@@ -10,6 +10,7 @@ import { CategoryChart } from '@/components/dashboard/CategoryChart';
 import { ExportReport } from '@/components/dashboard/ExportReport';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { CreditCardForm } from '@/components/cards/CreditCardForm';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -57,7 +58,7 @@ export default function Dashboard() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -125,11 +126,19 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, dateRange]);
+
+  const handleRefresh = useCallback(async () => {
+    await fetchData();
+    toast({
+      title: 'Atualizado',
+      description: 'Dados atualizados com sucesso.',
+    });
+  }, [fetchData]);
 
   useEffect(() => {
     fetchData();
-  }, [user, dateRange]);
+  }, [fetchData]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -257,88 +266,90 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4 sm:space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:gap-4">
-          <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Visão geral das suas finanças</p>
+      <PullToRefresh onRefresh={handleRefresh} className="min-h-full">
+        <div className="space-y-4 sm:space-y-6">
+          {/* Header */}
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="space-y-1">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-sm text-muted-foreground">Visão geral das suas finanças</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <ExportReport
+                transactions={allTransactions}
+                categories={categories}
+                dateRange={{ from: dateRange?.from, to: dateRange?.to }}
+                stats={stats}
+              />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ExportReport
-              transactions={allTransactions}
+
+          {/* Credit Card Alerts */}
+          <CreditCardAlerts cards={creditCards} threshold={80} />
+
+          {/* Date Range Filter */}
+          <DateRangeFilter
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+          />
+
+          {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <StatCard
+              title="Saldo"
+              value={formatCurrency(stats.balance)}
+              icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
+              variant="primary"
+            />
+            <StatCard
+              title="Receitas"
+              value={formatCurrency(stats.income)}
+              icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />}
+              variant="income"
+            />
+            <StatCard
+              title="Despesas"
+              value={formatCurrency(stats.expense)}
+              icon={<TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />}
+              variant="expense"
+            />
+            <StatCard
+              title="Limite Livre"
+              value={formatCurrency(stats.creditLimit - stats.creditUsed)}
+              icon={<CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />}
+            />
+          </div>
+
+          {/* Charts - Stack on mobile */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <IncomeExpenseChart transactions={chartTransactions} />
+            <CategoryChart
+              transactions={chartTransactions}
               categories={categories}
-              dateRange={{ from: dateRange?.from, to: dateRange?.to }}
-              stats={stats}
-            />
-          </div>
-        </div>
-
-        {/* Credit Card Alerts */}
-        <CreditCardAlerts cards={creditCards} threshold={80} />
-
-        {/* Date Range Filter */}
-        <DateRangeFilter
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-        />
-
-        {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard
-            title="Saldo"
-            value={formatCurrency(stats.balance)}
-            icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
-            variant="primary"
-          />
-          <StatCard
-            title="Receitas"
-            value={formatCurrency(stats.income)}
-            icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />}
-            variant="income"
-          />
-          <StatCard
-            title="Despesas"
-            value={formatCurrency(stats.expense)}
-            icon={<TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />}
-            variant="expense"
-          />
-          <StatCard
-            title="Limite Livre"
-            value={formatCurrency(stats.creditLimit - stats.creditUsed)}
-            icon={<CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />}
-          />
-        </div>
-
-        {/* Charts - Stack on mobile */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <IncomeExpenseChart transactions={chartTransactions} />
-          <CategoryChart
-            transactions={chartTransactions}
-            categories={categories}
-            type="expense"
-          />
-        </div>
-
-        {/* Main Content Grid - Stack on mobile/tablet */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-          {/* Transactions */}
-          <div className="xl:col-span-2">
-            <RecentTransactions
-              transactions={recentTransactions}
-              onAddTransaction={() => setTransactionFormOpen(true)}
+              type="expense"
             />
           </div>
 
-          {/* Credit Cards */}
-          <div className="xl:col-span-1">
-            <CreditCardWidget
-              cards={creditCards}
-              onAddCard={() => setCardFormOpen(true)}
-            />
+          {/* Main Content Grid - Stack on mobile/tablet */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+            {/* Transactions */}
+            <div className="xl:col-span-2">
+              <RecentTransactions
+                transactions={recentTransactions}
+                onAddTransaction={() => setTransactionFormOpen(true)}
+              />
+            </div>
+
+            {/* Credit Cards */}
+            <div className="xl:col-span-1">
+              <CreditCardWidget
+                cards={creditCards}
+                onAddCard={() => setCardFormOpen(true)}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </PullToRefresh>
 
       {/* Forms */}
       <TransactionForm
