@@ -7,8 +7,11 @@ import { CreditCardForm } from '@/components/cards/CreditCardForm';
 import { CreditCardCard } from '@/components/cards/CreditCardCard';
 import { DeleteCardDialog } from '@/components/cards/DeleteCardDialog';
 import { CardDetailView } from '@/components/cards/CardDetailView';
+import { UpgradeBanner } from '@/components/upgrade/UpgradeBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { useFeatureCheck } from '@/components/upgrade/FeatureGate';
 import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
@@ -16,7 +19,8 @@ import {
   Loader2, 
   TrendingUp, 
   TrendingDown,
-  Wallet
+  Wallet,
+  Lock
 } from 'lucide-react';
 
 interface CreditCardData {
@@ -52,6 +56,8 @@ const formatCurrency = (value: number) => {
 
 export default function Cards() {
   const { user } = useAuth();
+  const { canCreate, getLimit, isFree, isUnlimited } = usePlanLimits();
+  const { checkAndShowUpgrade, UpgradeDialogComponent } = useFeatureCheck();
   const [cards, setCards] = useState<CreditCardData[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -65,6 +71,10 @@ export default function Cards() {
   const [selectedCard, setSelectedCard] = useState<CreditCardData | null>(null);
   const [cardTransactions, setCardTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+
+  const cardLimit = getLimit('credit_cards');
+  const canCreateCard = canCreate('credit_cards', cards.length);
+  const isCardsUnlimited = isUnlimited('credit_cards');
 
   const fetchCards = async () => {
     if (!user) return;
@@ -136,6 +146,13 @@ export default function Cards() {
   useEffect(() => {
     fetchCards();
   }, [user]);
+
+  const handleCreateClick = () => {
+    if (!checkAndShowUpgrade('credit_cards', cards.length)) {
+      return;
+    }
+    setFormOpen(true);
+  };
 
   const handleCreateCard = async (data: any) => {
     if (!user) return;
@@ -296,16 +313,41 @@ export default function Cards() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Cartões de Crédito</h1>
-            <p className="text-muted-foreground">Gerencie seus cartões, limites e faturas</p>
+            <p className="text-muted-foreground">
+              Gerencie seus cartões, limites e faturas
+              {!isCardsUnlimited && cardLimit !== null && (
+                <span className="ml-2 text-sm">
+                  ({cards.length}/{cardLimit} usados)
+                </span>
+              )}
+            </p>
           </div>
           <Button 
-            onClick={() => setFormOpen(true)} 
+            onClick={handleCreateClick} 
             className="bg-primary hover:bg-primary/90 gap-2"
+            disabled={!canCreateCard}
           >
-            <Plus className="w-4 h-4" />
-            Novo Cartão
+            {!canCreateCard ? (
+              <>
+                <Lock className="w-4 h-4" />
+                Limite atingido
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Novo Cartão
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Upgrade Banner when limit reached */}
+        {!canCreateCard && isFree() && (
+          <UpgradeBanner
+            feature="cartões de crédito ilimitados"
+            description={`Você atingiu o limite de ${cardLimit} cartão no plano gratuito. Faça upgrade para cadastrar cartões ilimitados!`}
+          />
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -398,7 +440,7 @@ export default function Cards() {
             <p className="text-lg font-medium text-foreground mb-2">Nenhum cartão cadastrado</p>
             <p className="text-muted-foreground mb-4">Adicione seu primeiro cartão de crédito</p>
             <Button 
-              onClick={() => setFormOpen(true)} 
+              onClick={handleCreateClick} 
               className="bg-primary hover:bg-primary/90 gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -438,6 +480,8 @@ export default function Cards() {
         onConfirm={handleDeleteCard}
         card={deletingCard}
       />
+
+      <UpgradeDialogComponent />
     </DashboardLayout>
   );
 }

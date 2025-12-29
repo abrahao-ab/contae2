@@ -5,10 +5,13 @@ import { Input } from '@/components/ui/input';
 import { AccountForm } from '@/components/accounts/AccountForm';
 import { AccountCard } from '@/components/accounts/AccountCard';
 import { DeleteAccountDialog } from '@/components/accounts/DeleteAccountDialog';
+import { UpgradeBanner } from '@/components/upgrade/UpgradeBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { useFeatureCheck } from '@/components/upgrade/FeatureGate';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Search, Building2, Loader2 } from 'lucide-react';
+import { Plus, Search, Building2, Loader2, Lock } from 'lucide-react';
 
 interface Account {
   id: string;
@@ -20,6 +23,8 @@ interface Account {
 
 export default function Accounts() {
   const { user } = useAuth();
+  const { canCreate, getLimit, isFree, isUnlimited } = usePlanLimits();
+  const { checkAndShowUpgrade, UpgradeDialogComponent } = useFeatureCheck();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +34,10 @@ export default function Accounts() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
+
+  const accountLimit = getLimit('bank_accounts');
+  const canCreateAccount = canCreate('bank_accounts', accounts.length);
+  const isAccountsUnlimited = isUnlimited('bank_accounts');
 
   const fetchAccounts = async () => {
     if (!user) return;
@@ -57,6 +66,13 @@ export default function Accounts() {
   useEffect(() => {
     fetchAccounts();
   }, [user]);
+
+  const handleCreateClick = () => {
+    if (!checkAndShowUpgrade('bank_accounts', accounts.length)) {
+      return;
+    }
+    setFormOpen(true);
+  };
 
   const handleCreateAccount = async (data: { name: string; bank_name?: string; icon: string; color: string }) => {
     if (!user) return;
@@ -181,16 +197,41 @@ export default function Accounts() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Contas Bancárias</h1>
-            <p className="text-muted-foreground">Gerencie suas contas para organizar transações</p>
+            <p className="text-muted-foreground">
+              Gerencie suas contas para organizar transações
+              {!isAccountsUnlimited && accountLimit !== null && (
+                <span className="ml-2 text-sm">
+                  ({accounts.length}/{accountLimit} usadas)
+                </span>
+              )}
+            </p>
           </div>
           <Button 
-            onClick={() => setFormOpen(true)} 
+            onClick={handleCreateClick} 
             className="bg-primary hover:bg-primary/90 gap-2"
+            disabled={!canCreateAccount}
           >
-            <Plus className="w-4 h-4" />
-            Nova Conta
+            {!canCreateAccount ? (
+              <>
+                <Lock className="w-4 h-4" />
+                Limite atingido
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Nova Conta
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Upgrade Banner when limit reached */}
+        {!canCreateAccount && isFree() && (
+          <UpgradeBanner
+            feature="contas bancárias ilimitadas"
+            description={`Você atingiu o limite de ${accountLimit} conta no plano gratuito. Faça upgrade para cadastrar contas ilimitadas!`}
+          />
+        )}
 
         {/* Search */}
         <div className="relative max-w-md">
@@ -214,7 +255,7 @@ export default function Accounts() {
             <p className="text-lg font-medium text-foreground mb-2">Nenhuma conta cadastrada</p>
             <p className="text-muted-foreground mb-4">Adicione suas contas bancárias para começar</p>
             <Button 
-              onClick={() => setFormOpen(true)} 
+              onClick={handleCreateClick} 
               className="bg-primary hover:bg-primary/90 gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -259,6 +300,8 @@ export default function Accounts() {
         onConfirm={handleDeleteAccount}
         account={deletingAccount}
       />
+
+      <UpgradeDialogComponent />
     </DashboardLayout>
   );
 }
