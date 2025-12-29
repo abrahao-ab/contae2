@@ -12,7 +12,7 @@ interface Transaction {
   description: string;
   category?: string;
   date: string;
-  source: 'web' | 'whatsapp_text' | 'whatsapp_voice' | 'whatsapp_image';
+  source?: string;
 }
 
 interface RecentTransactionsProps {
@@ -28,7 +28,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const sourceLabels = {
+const sourceLabels: Record<string, string> = {
   web: 'Web',
   whatsapp_text: 'WhatsApp',
   whatsapp_voice: 'Voz',
@@ -89,8 +89,12 @@ export function RecentTransactions({ transactions, onAddTransaction, onViewAll }
                           <span>{transaction.category}</span>
                         </>
                       )}
-                      <span>•</span>
-                      <span className="text-primary">{sourceLabels[transaction.source]}</span>
+                      {transaction.source && (
+                        <>
+                          <span>•</span>
+                          <span className="text-primary">{sourceLabels[transaction.source] || transaction.source}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
