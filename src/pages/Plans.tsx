@@ -4,6 +4,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -16,7 +18,9 @@ interface Plan {
   id: AccountType;
   name: string;
   description: string;
-  price: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  yearlyDiscount: number;
   icon: React.ReactNode;
   features: string[];
   popular?: boolean;
@@ -27,7 +31,9 @@ const plans: Plan[] = [
     id: 'free',
     name: 'Gratuito',
     description: 'Para começar a organizar suas finanças',
-    price: 'R$ 0',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    yearlyDiscount: 0,
     icon: <Zap className="w-6 h-6" />,
     features: [
       'Controle de gastos básico',
@@ -40,7 +46,9 @@ const plans: Plan[] = [
     id: 'paid',
     name: 'Premium',
     description: 'Para quem quer o controle completo',
-    price: 'R$ 19,90/mês',
+    monthlyPrice: 19.90,
+    yearlyPrice: 19.90 * 12 * 0.9, // 10% desconto
+    yearlyDiscount: 10,
     icon: <Crown className="w-6 h-6" />,
     popular: true,
     features: [
@@ -56,7 +64,9 @@ const plans: Plan[] = [
     id: 'couple',
     name: 'Casal',
     description: 'Finanças compartilhadas a dois',
-    price: 'R$ 29,90/mês',
+    monthlyPrice: 29.90,
+    yearlyPrice: 29.90 * 12 * 0.85, // 15% desconto
+    yearlyDiscount: 15,
     icon: <Users className="w-6 h-6" />,
     features: [
       'Tudo do plano Premium',
@@ -68,12 +78,24 @@ const plans: Plan[] = [
   },
 ];
 
+const formatPrice = (price: number, isYearly: boolean = false) => {
+  if (price === 0) return 'R$ 0';
+  
+  const formatted = price.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  
+  return `R$ ${formatted}${isYearly ? '/ano' : '/mês'}`;
+};
+
 export default function Plans() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [currentPlan, setCurrentPlan] = useState<AccountType>('free');
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<AccountType | null>(null);
+  const [isYearly, setIsYearly] = useState(false);
 
   useEffect(() => {
     const fetchCurrentPlan = async () => {
@@ -151,6 +173,24 @@ export default function Plans() {
     );
   };
 
+  const getDisplayPrice = (plan: Plan) => {
+    if (plan.monthlyPrice === 0) {
+      return formatPrice(0);
+    }
+    
+    if (isYearly) {
+      return formatPrice(plan.yearlyPrice, true);
+    }
+    
+    return formatPrice(plan.monthlyPrice);
+  };
+
+  const getMonthlyEquivalent = (plan: Plan) => {
+    if (plan.monthlyPrice === 0 || !isYearly) return null;
+    const monthlyFromYearly = plan.yearlyPrice / 12;
+    return formatPrice(monthlyFromYearly).replace('/mês', '');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 pt-12 lg:pt-0">
@@ -165,6 +205,32 @@ export default function Plans() {
           <div className="space-y-1">
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Planos</h1>
             <p className="text-muted-foreground">Escolha o melhor plano para você</p>
+          </div>
+        </div>
+
+        {/* Toggle Mensal/Anual */}
+        <div className="flex items-center justify-center gap-4 py-4">
+          <Label 
+            htmlFor="billing-toggle" 
+            className={`text-sm font-medium transition-colors ${!isYearly ? 'text-foreground' : 'text-muted-foreground'}`}
+          >
+            Mensal
+          </Label>
+          <Switch
+            id="billing-toggle"
+            checked={isYearly}
+            onCheckedChange={setIsYearly}
+          />
+          <div className="flex items-center gap-2">
+            <Label 
+              htmlFor="billing-toggle" 
+              className={`text-sm font-medium transition-colors ${isYearly ? 'text-foreground' : 'text-muted-foreground'}`}
+            >
+              Anual
+            </Label>
+            <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">
+              Até 15% OFF
+            </Badge>
           </div>
         </div>
 
@@ -186,6 +252,14 @@ export default function Plans() {
                   Atual
                 </Badge>
               )}
+              {isYearly && plan.yearlyDiscount > 0 && (
+                <Badge 
+                  variant="secondary" 
+                  className="absolute top-4 right-4 bg-green-500/10 text-green-600 border-green-500/20"
+                >
+                  -{plan.yearlyDiscount}%
+                </Badge>
+              )}
               
               <CardHeader className="text-center pb-2">
                 <div className="mx-auto mb-2 p-3 rounded-full bg-primary/10 text-primary w-fit">
@@ -196,8 +270,20 @@ export default function Plans() {
               </CardHeader>
               
               <CardContent className="text-center space-y-4">
-                <div className="text-3xl font-bold text-foreground">
-                  {plan.price}
+                <div className="space-y-1">
+                  <div className="text-3xl font-bold text-foreground">
+                    {getDisplayPrice(plan)}
+                  </div>
+                  {isYearly && plan.monthlyPrice > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      equivale a <span className="font-medium text-foreground">{getMonthlyEquivalent(plan)}</span>/mês
+                    </div>
+                  )}
+                  {isYearly && plan.monthlyPrice > 0 && (
+                    <div className="text-xs text-muted-foreground line-through">
+                      {formatPrice(plan.monthlyPrice * 12, true)}
+                    </div>
+                  )}
                 </div>
                 
                 <ul className="space-y-2 text-left">
