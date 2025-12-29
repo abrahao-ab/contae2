@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { 
   MessageSquare, 
   CreditCard, 
@@ -53,6 +55,21 @@ const slideInRight = {
 };
 
 const Landing = () => {
+  const [isAnnual, setIsAnnual] = useState(false);
+
+  // Preços e descontos
+  const premiumMonthly = 19.90;
+  const coupleMonthly = 29.90;
+  const premiumDiscount = 0.10; // 10%
+  const coupleDiscount = 0.15; // 15%
+
+  const premiumAnnual = premiumMonthly * 12 * (1 - premiumDiscount);
+  const coupleAnnual = coupleMonthly * 12 * (1 - coupleDiscount);
+
+  const formatPrice = (price: number) => {
+    return price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const features = [
     {
       icon: MessageSquare,
@@ -522,9 +539,38 @@ const Landing = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Planos simples e transparentes
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
               Comece grátis e evolua conforme sua necessidade.
             </p>
+            
+            {/* Toggle Mensal/Anual */}
+            <motion.div 
+              className="flex items-center justify-center gap-4"
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+            >
+              <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Mensal
+              </span>
+              <Switch
+                checked={isAnnual}
+                onCheckedChange={setIsAnnual}
+              />
+              <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Anual
+              </span>
+              {isAnnual && (
+                <motion.span 
+                  className="text-xs bg-success/20 text-success px-2 py-1 rounded-full font-medium"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                >
+                  Economize até 15%
+                </motion.span>
+              )}
+            </motion.div>
           </motion.div>
           
           <motion.div 
@@ -584,8 +630,28 @@ const Landing = () => {
                   <h3 className="text-xl font-semibold text-foreground mb-2">Premium</h3>
                   <p className="text-muted-foreground mb-6">Para quem quer o controle completo</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-foreground">R$ 19,90</span>
-                    <span className="text-muted-foreground">/mês</span>
+                    {isAnnual ? (
+                      <>
+                        <span className="text-4xl font-bold text-foreground">R$ {formatPrice(premiumAnnual)}</span>
+                        <span className="text-muted-foreground">/ano</span>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            equivale a <span className="text-foreground font-medium">R$ {formatPrice(premiumAnnual / 12)}</span>/mês
+                          </p>
+                          <p className="text-sm text-muted-foreground line-through">
+                            R$ {formatPrice(premiumMonthly * 12)}/ano
+                          </p>
+                          <span className="inline-block text-xs bg-success/20 text-success px-2 py-0.5 rounded-full font-medium">
+                            10% de desconto
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-4xl font-bold text-foreground">R$ {formatPrice(premiumMonthly)}</span>
+                        <span className="text-muted-foreground">/mês</span>
+                      </>
+                    )}
                   </div>
                   <ul className="space-y-3 mb-8">
                     {['Tudo do plano Gratuito', 'IA para classificação automática', 'Análise comportamental', 'Projeções financeiras', 'Alertas inteligentes', 'Suporte prioritário'].map((item, i) => (
@@ -618,8 +684,28 @@ const Landing = () => {
                   <h3 className="text-xl font-semibold text-foreground mb-2">Casal</h3>
                   <p className="text-muted-foreground mb-6">Finanças compartilhadas a dois</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-foreground">R$ 29,90</span>
-                    <span className="text-muted-foreground">/mês</span>
+                    {isAnnual ? (
+                      <>
+                        <span className="text-4xl font-bold text-foreground">R$ {formatPrice(coupleAnnual)}</span>
+                        <span className="text-muted-foreground">/ano</span>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            equivale a <span className="text-foreground font-medium">R$ {formatPrice(coupleAnnual / 12)}</span>/mês
+                          </p>
+                          <p className="text-sm text-muted-foreground line-through">
+                            R$ {formatPrice(coupleMonthly * 12)}/ano
+                          </p>
+                          <span className="inline-block text-xs bg-success/20 text-success px-2 py-0.5 rounded-full font-medium">
+                            15% de desconto
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-4xl font-bold text-foreground">R$ {formatPrice(coupleMonthly)}</span>
+                        <span className="text-muted-foreground">/mês</span>
+                      </>
+                    )}
                   </div>
                   <ul className="space-y-3 mb-8">
                     {['Tudo do plano Premium', '2 números WhatsApp', 'Dashboard compartilhado', 'Metas em conjunto', 'Relatórios comparativos'].map((item, i) => (
