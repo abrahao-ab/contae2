@@ -47,30 +47,233 @@ export type Database = {
       categories: {
         Row: {
           color: string | null
+          couple_id: string | null
           created_at: string
           icon: string | null
           id: string
           is_default: boolean | null
+          is_shared: boolean
           name: string
           user_id: string
         }
         Insert: {
           color?: string | null
+          couple_id?: string | null
           created_at?: string
           icon?: string | null
           id?: string
           is_default?: boolean | null
+          is_shared?: boolean
           name: string
           user_id: string
         }
         Update: {
           color?: string | null
+          couple_id?: string | null
           created_at?: string
           icon?: string | null
           id?: string
           is_default?: boolean | null
+          is_shared?: boolean
           name?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couple_budgets: {
+        Row: {
+          alert_threshold: number
+          category_id: string | null
+          couple_id: string
+          created_at: string
+          id: string
+          monthly_limit: number
+          updated_at: string
+        }
+        Insert: {
+          alert_threshold?: number
+          category_id?: string | null
+          couple_id: string
+          created_at?: string
+          id?: string
+          monthly_limit: number
+          updated_at?: string
+        }
+        Update: {
+          alert_threshold?: number
+          category_id?: string | null
+          couple_id?: string
+          created_at?: string
+          id?: string
+          monthly_limit?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_budgets_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couple_goals: {
+        Row: {
+          color: string | null
+          couple_id: string
+          created_at: string
+          current_amount: number
+          deadline: string | null
+          icon: string | null
+          id: string
+          is_completed: boolean
+          name: string
+          target_amount: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          couple_id: string
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          icon?: string | null
+          id?: string
+          is_completed?: boolean
+          name: string
+          target_amount: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          couple_id?: string
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          icon?: string | null
+          id?: string
+          is_completed?: boolean
+          name?: string
+          target_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_goals_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couple_invites: {
+        Row: {
+          couple_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          invitee_phone: string
+          inviter_id: string
+          status: string
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitee_phone: string
+          inviter_id: string
+          status?: string
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitee_phone?: string
+          inviter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_invites_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couple_members: {
+        Row: {
+          avatar_color: string | null
+          couple_id: string
+          id: string
+          is_owner: boolean
+          joined_at: string
+          nickname: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_color?: string | null
+          couple_id: string
+          id?: string
+          is_owner?: boolean
+          joined_at?: string
+          nickname?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_color?: string | null
+          couple_id?: string
+          id?: string
+          is_owner?: boolean
+          joined_at?: string
+          nickname?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_members_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couples: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -275,6 +478,7 @@ export type Database = {
           amount: number
           bank_account_id: string | null
           category_id: string | null
+          couple_id: string | null
           created_at: string
           credit_card_id: string | null
           current_installment: number | null
@@ -283,6 +487,7 @@ export type Database = {
           id: string
           is_installment: boolean | null
           is_recurring: boolean | null
+          owner_type: Database["public"]["Enums"]["transaction_owner_type"]
           parent_transaction_id: string | null
           purchase_date: string | null
           source: Database["public"]["Enums"]["transaction_source"]
@@ -295,6 +500,7 @@ export type Database = {
           amount: number
           bank_account_id?: string | null
           category_id?: string | null
+          couple_id?: string | null
           created_at?: string
           credit_card_id?: string | null
           current_installment?: number | null
@@ -303,6 +509,7 @@ export type Database = {
           id?: string
           is_installment?: boolean | null
           is_recurring?: boolean | null
+          owner_type?: Database["public"]["Enums"]["transaction_owner_type"]
           parent_transaction_id?: string | null
           purchase_date?: string | null
           source?: Database["public"]["Enums"]["transaction_source"]
@@ -315,6 +522,7 @@ export type Database = {
           amount?: number
           bank_account_id?: string | null
           category_id?: string | null
+          couple_id?: string | null
           created_at?: string
           credit_card_id?: string | null
           current_installment?: number | null
@@ -323,6 +531,7 @@ export type Database = {
           id?: string
           is_installment?: boolean | null
           is_recurring?: boolean | null
+          owner_type?: Database["public"]["Enums"]["transaction_owner_type"]
           parent_transaction_id?: string | null
           purchase_date?: string | null
           source?: Database["public"]["Enums"]["transaction_source"]
@@ -344,6 +553,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
             referencedColumns: ["id"]
           },
           {
@@ -412,6 +628,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_couple_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -419,11 +636,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_couple_member: {
+        Args: { _couple_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       account_type: "free" | "paid" | "couple"
       app_role: "admin" | "user"
       installment_status: "pending" | "paid" | "overdue"
+      transaction_owner_type: "individual" | "shared"
       transaction_source:
         | "web"
         | "whatsapp_text"
@@ -560,6 +782,7 @@ export const Constants = {
       account_type: ["free", "paid", "couple"],
       app_role: ["admin", "user"],
       installment_status: ["pending", "paid", "overdue"],
+      transaction_owner_type: ["individual", "shared"],
       transaction_source: [
         "web",
         "whatsapp_text",
