@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
 import { Moon, Sun, User, Bell, Shield } from 'lucide-react';
+import { WhatsAppSettings } from '@/components/settings/WhatsAppSettings';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -19,6 +20,9 @@ export default function Settings() {
         </div>
 
         <div className="grid gap-6">
+          {/* WhatsApp */}
+          <WhatsAppSettings />
+
           {/* Appearance */}
           <Card className="bg-card border-border">
             <CardHeader>
