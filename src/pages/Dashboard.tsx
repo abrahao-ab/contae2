@@ -11,11 +11,15 @@ import { ExportReport } from '@/components/dashboard/ExportReport';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { CreditCardForm } from '@/components/cards/CreditCardForm';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { ViewModeToggle } from '@/components/couple/ViewModeToggle';
+import { CoupleGoalsCard } from '@/components/couple/CoupleGoalsCard';
+import { CoupleBudgetAlerts } from '@/components/couple/CoupleBudgetAlerts';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useCouple } from '@/hooks/useCouple';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Wallet, TrendingUp, TrendingDown, CreditCard, Loader2 } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, CreditCard, Loader2, Heart } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
@@ -34,6 +38,9 @@ interface Transaction {
   date: string;
   category_id: string | null;
   source: string;
+  user_id?: string;
+  couple_id?: string | null;
+  owner_type?: string;
 }
 
 interface Category {
@@ -58,6 +65,7 @@ interface CreditCardData {
 export default function Dashboard() {
   const { user } = useAuth();
   const { createTransaction } = useTransactions();
+  const { viewMode, couple, isCouplePlan, hasCouple } = useCouple();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -72,28 +80,44 @@ export default function Dashboard() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Determine if we should show couple view
+  const showCoupleView = isCouplePlan && hasCouple && viewMode === 'couple';
+
   const fetchData = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      let query = supabase
-        .from('transactions')
-        .select('id, type, amount, description, date, category_id, source')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
+      // Build transactions query based on view mode
+      let transactionsQuery;
+      
+      if (showCoupleView && couple) {
+        // Couple view: get all transactions with this couple_id
+        transactionsQuery = supabase
+          .from('transactions')
+          .select('id, type, amount, description, date, category_id, source, user_id, couple_id, owner_type')
+          .eq('couple_id', couple.id)
+          .order('date', { ascending: false });
+      } else {
+        // Individual view: get only user's transactions
+        transactionsQuery = supabase
+          .from('transactions')
+          .select('id, type, amount, description, date, category_id, source, user_id, couple_id, owner_type')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+      }
 
       // Apply date range filter
       if (dateRange?.from) {
-        query = query.gte('date', format(dateRange.from, 'yyyy-MM-dd'));
+        transactionsQuery = transactionsQuery.gte('date', format(dateRange.from, 'yyyy-MM-dd'));
       }
       if (dateRange?.to) {
-        query = query.lte('date', format(dateRange.to, 'yyyy-MM-dd'));
+        transactionsQuery = transactionsQuery.lte('date', format(dateRange.to, 'yyyy-MM-dd'));
       }
 
       // Fetch all data in parallel
       const [transactionsRes, cardsRes, categoriesRes, accountsRes] = await Promise.all([
-        query,
+        transactionsQuery,
         supabase
           .from('credit_cards')
           .select('*')
@@ -102,7 +126,7 @@ export default function Dashboard() {
         supabase
           .from('categories')
           .select('id, name, icon, color')
-          .eq('user_id', user.id),
+          .or(`user_id.eq.${user.id}${couple ? `,couple_id.eq.${couple.id}` : ''}`),
         supabase
           .from('bank_accounts')
           .select('id, name')
@@ -142,7 +166,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, dateRange]);
+  }, [user, dateRange, showCoupleView, couple]);
 
   const handleRefresh = useCallback(async () => {
     await fetchData();
@@ -283,9 +307,19 @@ export default function Dashboard() {
         <div className="space-y-4 sm:space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-3 sm:gap-4">
-            <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Visão geral das suas finanças</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                    {showCoupleView ? 'Dashboard do Casal' : 'Dashboard'}
+                  </h1>
+                  {showCoupleView && <Heart className="w-5 h-5 text-primary" fill="currentColor" />}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {showCoupleView ? 'Visão financeira conjunta' : 'Visão geral das suas finanças'}
+                </p>
+              </div>
+              <ViewModeToggle />
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <ExportReport
@@ -300,6 +334,14 @@ export default function Dashboard() {
           {/* Credit Card Alerts */}
           <CreditCardAlerts cards={creditCards} threshold={80} />
 
+          {/* Couple Budget Alerts */}
+          {showCoupleView && (
+            <CoupleBudgetAlerts 
+              transactions={chartTransactions} 
+              categories={categories} 
+            />
+          )}
+
           {/* Date Range Filter */}
           <DateRangeFilter
             dateRange={dateRange}
@@ -309,9 +351,9 @@ export default function Dashboard() {
           {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <StatCard
-              title="Saldo"
+              title={showCoupleView ? "Saldo do Casal" : "Saldo"}
               value={formatCurrency(stats.balance)}
-              icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
+              icon={showCoupleView ? <Heart className="w-4 h-4 sm:w-5 sm:h-5" /> : <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
               variant="primary"
             />
             <StatCard
@@ -342,6 +384,11 @@ export default function Dashboard() {
               type="expense"
             />
           </div>
+
+          {/* Couple Goals Card - Only in couple view */}
+          {showCoupleView && (
+            <CoupleGoalsCard />
+          )}
 
           {/* Main Content Grid - Stack on mobile/tablet */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
