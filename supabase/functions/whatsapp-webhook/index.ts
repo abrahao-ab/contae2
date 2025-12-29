@@ -2,15 +2,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
 }
 
 interface WhatsAppMessage {
   phone: string
   message: string
   type: 'text' | 'voice' | 'image'
-  transcription?: string // For voice messages
-  extractedText?: string // For image OCR
+  transcription?: string
+  extractedText?: string
 }
 
 interface TransactionData {
@@ -21,24 +21,71 @@ interface TransactionData {
   date?: string
 }
 
+// Verifica assinatura HMAC para autenticar webhooks
+async function verifyWebhookSignature(req: Request, body: string): Promise<boolean> {
+  const signature = req.headers.get('x-webhook-signature')
+  const secret = Deno.env.get('WEBHOOK_SECRET')
+  
+  // Se não tiver secret configurado, rejeita por segurança
+  if (!secret) {
+    console.error('WEBHOOK_SECRET not configured')
+    return false
+  }
+  
+  // Se não tiver signature, rejeita
+  if (!signature) {
+    console.error('Missing x-webhook-signature header')
+    return false
+  }
+  
+  try {
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    
+    const signatureBytes = await crypto.subtle.sign('HMAC', key, encoder.encode(body))
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
+    
+    return signature === expectedSignature
+  } catch (error) {
+    console.error('Error verifying signature:', error)
+    return false
+  }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Ler body como texto para verificar assinatura
+    const bodyText = await req.text()
+    
+    // Verificar assinatura HMAC
+    const isValid = await verifyWebhookSignature(req, bodyText)
+    if (!isValid) {
+      console.error('Invalid webhook signature')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const body: WhatsAppMessage = await req.json()
+    const body: WhatsAppMessage = JSON.parse(bodyText)
     console.log('Received WhatsApp message:', JSON.stringify(body))
 
     const { phone, message, type, transcription, extractedText } = body
-
-    // Get the actual message content based on type
     const content = type === 'voice' ? transcription : type === 'image' ? extractedText : message
 
     if (!phone || !content) {
@@ -53,7 +100,7 @@ Deno.serve(async (req) => {
       .from('whatsapp_numbers')
       .select('user_id')
       .eq('phone', phone)
-      .single()
+      .maybeSingle()
 
     if (whatsappError || !whatsappNumber) {
       console.log('User not found for phone:', phone)
@@ -67,8 +114,6 @@ Deno.serve(async (req) => {
     }
 
     const userId = whatsappNumber.user_id
-
-    // Parse transaction from message content
     const parsed = parseTransaction(content)
     
     if (!parsed) {
@@ -81,13 +126,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get user's categories
     const { data: categories } = await supabase
       .from('categories')
       .select('id, name')
       .eq('user_id', userId)
 
-    // Try to match category
     let categoryId = null
     if (parsed.category_name && categories) {
       const matchedCategory = categories.find(
@@ -99,11 +142,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Determine transaction source based on message type
     const source = type === 'voice' ? 'whatsapp_voice' : 
                    type === 'image' ? 'whatsapp_image' : 'whatsapp_text'
 
-    // Create transaction
     const { data: transaction, error: transactionError } = await supabase
       .from('transactions')
       .insert({
@@ -159,21 +200,18 @@ Deno.serve(async (req) => {
 function parseTransaction(text: string): TransactionData | null {
   const normalizedText = text.toLowerCase().trim()
   
-  // Patterns for expenses
   const expensePatterns = [
     /(?:gastei|paguei|comprei|gastar|pagar|comprar)\s+(?:r\$?\s*)?(\d+(?:[.,]\d{2})?)\s*(?:reais?)?\s*(?:com|em|de|no|na)?\s*(.+)?/i,
     /(?:despesa|gasto)\s*(?:de)?\s*(?:r\$?\s*)?(\d+(?:[.,]\d{2})?)\s*(?:reais?)?\s*(?:com|em|de)?\s*(.+)?/i,
     /(?:r\$?\s*)?(\d+(?:[.,]\d{2})?)\s*(?:reais?)?\s*(?:de|com|em|no|na)\s+(.+)/i,
   ]
   
-  // Patterns for income
   const incomePatterns = [
     /(?:recebi|ganhei|receber|ganhar|entrou)\s+(?:r\$?\s*)?(\d+(?:[.,]\d{2})?)\s*(?:reais?)?\s*(?:de|do|da)?\s*(.+)?/i,
     /(?:receita|entrada)\s*(?:de)?\s*(?:r\$?\s*)?(\d+(?:[.,]\d{2})?)\s*(?:reais?)?\s*(?:de)?\s*(.+)?/i,
     /(?:salário|salario|freelance|pagamento)\s*(?:de)?\s*(?:r\$?\s*)?(\d+(?:[.,]\d{2})?)/i,
   ]
   
-  // Try expense patterns
   for (const pattern of expensePatterns) {
     const match = normalizedText.match(pattern)
     if (match) {
@@ -188,7 +226,6 @@ function parseTransaction(text: string): TransactionData | null {
     }
   }
   
-  // Try income patterns
   for (const pattern of incomePatterns) {
     const match = normalizedText.match(pattern)
     if (match) {
