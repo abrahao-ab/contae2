@@ -275,6 +275,17 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Convite não encontrado' };
       }
 
+      // Check if user is already in a couple
+      const { data: existingMember } = await supabase
+        .from('couple_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        return { success: false, error: 'Você já faz parte de um casal' };
+      }
+
       // Add user as member
       const { error: memberError } = await supabase
         .from('couple_members')
@@ -286,11 +297,33 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
 
       if (memberError) throw memberError;
 
+      // Update user's account_type to 'couple'
+      await supabase
+        .from('profiles')
+        .update({ account_type: 'couple' })
+        .eq('user_id', user.id);
+
       // Update invite status
       await supabase
         .from('couple_invites')
         .update({ status: 'accepted' })
         .eq('id', inviteId);
+
+      // Cancel any other pending invites for this user's phone numbers
+      const { data: userPhones } = await supabase
+        .from('whatsapp_numbers')
+        .select('phone')
+        .eq('user_id', user.id);
+
+      if (userPhones && userPhones.length > 0) {
+        const phones = userPhones.map(p => p.phone);
+        await supabase
+          .from('couple_invites')
+          .update({ status: 'cancelled' })
+          .in('invitee_phone', phones)
+          .eq('status', 'pending')
+          .neq('id', inviteId);
+      }
 
       await fetchCoupleData();
       return { success: true };
