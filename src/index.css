@@ -7,42 +7,43 @@
 @layer base {
   :root {
     /* Contaê Design System - Light Mode */
-    --background: 0 0% 100%;
-    --foreground: 159 68% 18%;
+    /* Clean, professional light theme */
+    --background: 150 10% 97%;
+    --foreground: 159 40% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 159 68% 18%;
+    --card-foreground: 159 40% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 159 68% 18%;
+    --popover-foreground: 159 40% 15%;
 
     /* Primary Green - Marca #A6E35A */
-    --primary: 91 72% 62%;
-    --primary-foreground: 159 68% 18%;
+    --primary: 91 72% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary Green #1F6A52 */
-    --secondary: 157 55% 27%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary - Darker green for contrast */
+    --secondary: 150 15% 92%;
+    --secondary-foreground: 159 40% 15%;
 
-    --muted: 150 20% 94%;
-    --muted-foreground: 159 40% 35%;
+    --muted: 150 10% 94%;
+    --muted-foreground: 159 20% 40%;
 
-    /* Soft Green Highlight #6FAF8F */
-    --accent: 150 30% 56%;
-    --accent-foreground: 159 68% 18%;
+    /* Accent - Soft green for highlights */
+    --accent: 91 60% 92%;
+    --accent-foreground: 91 72% 30%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 91 72% 62%;
-    --success-foreground: 159 68% 18%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
+    --warning-foreground: 0 0% 10%;
 
-    --border: 150 20% 85%;
-    --input: 150 20% 85%;
-    --ring: 91 72% 62%;
+    --border: 150 15% 85%;
+    --input: 150 15% 85%;
+    --ring: 91 72% 50%;
 
     --radius: 0.75rem;
 
@@ -50,90 +51,89 @@
     --sidebar-background: 159 68% 18%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 91 72% 62%;
-    --sidebar-primary-foreground: 159 68% 18%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 157 55% 27%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 157 55% 22%;
     --sidebar-ring: 91 72% 62%;
 
-    /* Custom Financial Colors */
-    --income: 91 72% 62%;
-    --income-foreground: 159 68% 18%;
-    --expense: 0 84% 60%;
+    /* Financial Colors - High contrast */
+    --income: 142 70% 40%;
+    --income-foreground: 0 0% 100%;
+    --expense: 0 75% 55%;
     --expense-foreground: 0 0% 100%;
     --limit: 38 92% 50%;
-    --limit-foreground: 0 0% 0%;
+    --limit-foreground: 0 0% 10%;
 
-    /* Contaê Brand Gradient */
+    /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(159 68% 18%), hsl(157 55% 27%), hsl(159 46% 34%));
-    --gradient-success: linear-gradient(135deg, hsl(91 72% 62%), hsl(91 72% 52%));
-    --gradient-expense: linear-gradient(135deg, hsl(0 84% 60%), hsl(0 84% 50%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(150 20% 98%));
+    --gradient-success: linear-gradient(135deg, hsl(142 70% 45%), hsl(142 70% 35%));
+    --gradient-expense: linear-gradient(135deg, hsl(0 75% 55%), hsl(0 75% 45%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(150 10% 98%));
   }
 
   .dark {
     /* Contaê Design System - Dark Mode */
-    /* Primary Dark Green #0F4F3A as background */
-    --background: 159 68% 18%;
-    --foreground: 0 0% 100%;
+    /* Rich dark green theme */
+    --background: 159 50% 8%;
+    --foreground: 150 20% 95%;
 
-    /* Secondary Green #1F6A52 for cards */
-    --card: 157 55% 27%;
-    --card-foreground: 0 0% 100%;
+    --card: 159 45% 12%;
+    --card-foreground: 150 20% 95%;
 
-    --popover: 157 55% 27%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 159 45% 12%;
+    --popover-foreground: 150 20% 95%;
 
-    /* Primary Green #A6E35A */
-    --primary: 91 72% 62%;
-    --primary-foreground: 159 68% 18%;
+    /* Primary Green #A6E35A - Slightly brighter for dark mode */
+    --primary: 91 72% 55%;
+    --primary-foreground: 159 68% 10%;
 
-    --secondary: 159 46% 34%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 159 40% 18%;
+    --secondary-foreground: 150 20% 95%;
 
-    --muted: 157 40% 22%;
-    --muted-foreground: 150 30% 70%;
+    --muted: 159 35% 15%;
+    --muted-foreground: 150 15% 60%;
 
-    /* Soft Green Highlight #6FAF8F */
-    --accent: 150 30% 56%;
-    --accent-foreground: 159 68% 18%;
+    /* Accent */
+    --accent: 91 50% 25%;
+    --accent-foreground: 91 72% 75%;
 
-    --destructive: 0 62% 50%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 91 72% 62%;
-    --success-foreground: 159 68% 18%;
+    --success: 142 65% 50%;
+    --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
+    --warning-foreground: 0 0% 10%;
 
-    --border: 157 40% 25%;
-    --input: 157 40% 25%;
-    --ring: 91 72% 62%;
+    --border: 159 35% 20%;
+    --input: 159 35% 20%;
+    --ring: 91 72% 55%;
 
-    /* Sidebar - Deeper Dark Green */
-    --sidebar-background: 159 68% 12%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 91 72% 62%;
-    --sidebar-primary-foreground: 159 68% 18%;
-    --sidebar-accent: 157 55% 22%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 157 55% 18%;
-    --sidebar-ring: 91 72% 62%;
+    /* Sidebar - Deeper dark */
+    --sidebar-background: 159 60% 6%;
+    --sidebar-foreground: 150 20% 95%;
+    --sidebar-primary: 91 72% 55%;
+    --sidebar-primary-foreground: 159 68% 10%;
+    --sidebar-accent: 159 45% 15%;
+    --sidebar-accent-foreground: 150 20% 95%;
+    --sidebar-border: 159 40% 12%;
+    --sidebar-ring: 91 72% 55%;
 
-    /* Custom Financial Colors */
-    --income: 91 72% 62%;
-    --income-foreground: 159 68% 18%;
+    /* Financial Colors */
+    --income: 142 65% 50%;
+    --income-foreground: 0 0% 100%;
     --expense: 0 70% 55%;
     --expense-foreground: 0 0% 100%;
-    --limit: 38 92% 50%;
-    --limit-foreground: 0 0% 0%;
+    --limit: 38 85% 55%;
+    --limit-foreground: 0 0% 10%;
 
-    /* Contaê Brand Gradient */
-    --gradient-primary: linear-gradient(135deg, hsl(159 68% 18%), hsl(157 55% 27%), hsl(159 46% 34%));
-    --gradient-success: linear-gradient(135deg, hsl(91 72% 62%), hsl(91 72% 52%));
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(159 60% 6%), hsl(159 45% 12%), hsl(159 40% 18%));
+    --gradient-success: linear-gradient(135deg, hsl(142 65% 50%), hsl(142 65% 40%));
     --gradient-expense: linear-gradient(135deg, hsl(0 70% 55%), hsl(0 70% 45%));
-    --gradient-card: linear-gradient(180deg, hsl(157 55% 29%), hsl(157 55% 25%));
+    --gradient-card: linear-gradient(180deg, hsl(159 45% 14%), hsl(159 45% 10%));
   }
 }
 
@@ -178,11 +178,11 @@
   }
 
   .glow-primary {
-    box-shadow: 0 0 40px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.25);
   }
 
   .glow-success {
-    box-shadow: 0 0 30px hsl(var(--success) / 0.3);
+    box-shadow: 0 0 30px hsl(var(--success) / 0.25);
   }
 
   .glow-expense {
@@ -190,6 +190,6 @@
   }
 
   .glow-accent {
-    box-shadow: 0 0 30px hsl(var(--accent) / 0.3);
+    box-shadow: 0 0 30px hsl(var(--accent) / 0.25);
   }
 }
