@@ -2,14 +2,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
 }
 
 function normalizePhone(phone: string): string {
-  // Remove tudo que não for número ou +
   let normalized = phone.replace(/[^\d+]/g, '')
-  
-  // Se não começar com +, assume Brasil
   if (!normalized.startsWith('+')) {
     if (normalized.startsWith('55')) {
       normalized = '+' + normalized
@@ -17,22 +14,66 @@ function normalizePhone(phone: string): string {
       normalized = '+55' + normalized
     }
   }
-  
   return normalized
 }
 
+async function verifyWebhookSignature(req: Request): Promise<boolean> {
+  const signature = req.headers.get('x-webhook-signature')
+  const secret = Deno.env.get('WEBHOOK_SECRET')
+  
+  if (!secret) {
+    console.error('WEBHOOK_SECRET not configured')
+    return false
+  }
+  
+  if (!signature) {
+    console.error('Missing x-webhook-signature header')
+    return false
+  }
+  
+  try {
+    const url = new URL(req.url)
+    const payload = url.pathname + url.search
+    
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    
+    const signatureBytes = await crypto.subtle.sign('HMAC', key, encoder.encode(payload))
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
+    
+    return signature === expectedSignature
+  } catch (error) {
+    console.error('Error verifying signature:', error)
+    return false
+  }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Verificar assinatura HMAC
+    const isValid = await verifyWebhookSignature(req)
+    if (!isValid) {
+      console.error('Invalid webhook signature')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Pegar phone da query string
     const url = new URL(req.url)
     const phone = url.searchParams.get('phone')
 
@@ -46,7 +87,6 @@ Deno.serve(async (req) => {
     const normalizedPhone = normalizePhone(phone)
     console.log(`Checking user with phone: ${normalizedPhone}`)
 
-    // Buscar na tabela whatsapp_numbers
     const { data: whatsappData, error: whatsappError } = await supabase
       .from('whatsapp_numbers')
       .select('user_id')
@@ -66,7 +106,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar perfil do usuário
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('account_type')

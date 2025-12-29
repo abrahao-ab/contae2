@@ -2,7 +2,44 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
+}
+
+async function verifyWebhookSignature(req: Request): Promise<boolean> {
+  const signature = req.headers.get('x-webhook-signature')
+  const secret = Deno.env.get('WEBHOOK_SECRET')
+  
+  if (!secret) {
+    console.error('WEBHOOK_SECRET not configured')
+    return false
+  }
+  
+  if (!signature) {
+    console.error('Missing x-webhook-signature header')
+    return false
+  }
+  
+  try {
+    const url = new URL(req.url)
+    const payload = url.pathname + url.search
+    
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    
+    const signatureBytes = await crypto.subtle.sign('HMAC', key, encoder.encode(payload))
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
+    
+    return signature === expectedSignature
+  } catch (error) {
+    console.error('Error verifying signature:', error)
+    return false
+  }
 }
 
 Deno.serve(async (req) => {
@@ -11,6 +48,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verificar assinatura HMAC
+    const isValid = await verifyWebhookSignature(req)
+    if (!isValid) {
+      console.error('Invalid webhook signature')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -18,7 +65,7 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url)
     const phone = url.searchParams.get('phone')
-    const period = url.searchParams.get('period') || 'month' // month, week, year
+    const period = url.searchParams.get('period') || 'month'
 
     if (!phone) {
       return new Response(
@@ -27,12 +74,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Find user by phone in whatsapp_numbers table
     const { data: whatsappNumber, error: whatsappError } = await supabase
       .from('whatsapp_numbers')
       .select('user_id')
       .eq('phone', phone)
-      .single()
+      .maybeSingle()
 
     if (whatsappError || !whatsappNumber) {
       return new Response(
@@ -43,14 +89,12 @@ Deno.serve(async (req) => {
 
     const userId = whatsappNumber.user_id
 
-    // Get user profile for name
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
-    // Calculate date range
     const now = new Date()
     let startDate: Date
     
@@ -69,7 +113,6 @@ Deno.serve(async (req) => {
     const startDateStr = startDate.toISOString().split('T')[0]
     const endDateStr = new Date().toISOString().split('T')[0]
 
-    // Get transactions for the period
     const { data: transactions, error: transactionsError } = await supabase
       .from('transactions')
       .select('amount, type, category_id, categories(name)')
@@ -85,7 +128,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Calculate totals
     let totalIncome = 0
     let totalExpense = 0
     const categoryTotals: Record<string, number> = {}
@@ -103,13 +145,11 @@ Deno.serve(async (req) => {
     const balance = totalIncome - totalExpense
     const transactionCount = transactions?.length || 0
 
-    // Sort categories by amount
     const topCategories = Object.entries(categoryTotals)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([name, amount]) => ({ name, amount }))
 
-    // Format response message for WhatsApp
     const periodLabel = period === 'week' ? 'desta semana' : period === 'year' ? 'deste ano' : 'deste mês'
     
     let message = `📊 *Resumo Financeiro ${periodLabel}*\n\n`
