@@ -257,19 +257,21 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pt-12 lg:pt-0">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Visão geral das suas finanças</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Visão geral das suas finanças</p>
           </div>
-          <ExportReport
-            transactions={allTransactions}
-            categories={categories}
-            dateRange={{ from: dateRange?.from, to: dateRange?.to }}
-            stats={stats}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportReport
+              transactions={allTransactions}
+              categories={categories}
+              dateRange={{ from: dateRange?.from, to: dateRange?.to }}
+              stats={stats}
+            />
+          </div>
         </div>
 
         {/* Credit Card Alerts */}
@@ -281,35 +283,35 @@ export default function Dashboard() {
           onDateRangeChange={setDateRange}
         />
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
-            title="Saldo do Período"
+            title="Saldo"
             value={formatCurrency(stats.balance)}
-            icon={<Wallet className="w-5 h-5" />}
+            icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />}
             variant="primary"
           />
           <StatCard
             title="Receitas"
             value={formatCurrency(stats.income)}
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />}
             variant="income"
           />
           <StatCard
             title="Despesas"
             value={formatCurrency(stats.expense)}
-            icon={<TrendingDown className="w-5 h-5" />}
+            icon={<TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />}
             variant="expense"
           />
           <StatCard
-            title="Limite Disponível"
+            title="Limite Livre"
             value={formatCurrency(stats.creditLimit - stats.creditUsed)}
-            icon={<CreditCard className="w-5 h-5" />}
+            icon={<CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />}
           />
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts - Stack on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <IncomeExpenseChart transactions={chartTransactions} />
           <CategoryChart
             transactions={chartTransactions}
@@ -318,10 +320,10 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content Grid - Stack on mobile/tablet */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
           {/* Transactions */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-2">
             <RecentTransactions
               transactions={recentTransactions}
               onAddTransaction={() => setTransactionFormOpen(true)}
@@ -329,7 +331,7 @@ export default function Dashboard() {
           </div>
 
           {/* Credit Cards */}
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1">
             <CreditCardWidget
               cards={creditCards}
               onAddCard={() => setCardFormOpen(true)}
