@@ -1,15 +1,18 @@
 import { useTheme } from 'next-themes';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
-import { Moon, Sun, User, Bell, Shield } from 'lucide-react';
+import { Moon, Sun, User, Bell, Shield, Crown, ChevronRight } from 'lucide-react';
 import { WhatsAppSettings } from '@/components/settings/WhatsAppSettings';
 
 export default function Settings() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
   return (
     <DashboardLayout>
@@ -56,9 +59,25 @@ export default function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-foreground">Email</Label>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-foreground">Email</Label>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </div>
+                
+                <div className="pt-2 border-t border-border">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => navigate('/plans')}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-primary" />
+                      Gerenciar Plano
+                    </span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
