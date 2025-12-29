@@ -1,17 +1,466 @@
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { TransactionForm } from '@/components/transactions/TransactionForm';
+import { TransactionCard } from '@/components/transactions/TransactionCard';
+import { TransactionFilters } from '@/components/transactions/TransactionFilters';
+import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
+import { Plus, Receipt, Loader2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
+
+interface Transaction {
+  id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  description: string | null;
+  date: string;
+  category_id: string | null;
+  credit_card_id: string | null;
+  bank_account_id: string | null;
+  is_installment: boolean | null;
+  current_installment: number | null;
+  total_installments: number | null;
+  category: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+  } | null;
+  credit_card: {
+    id: string;
+    name: string;
+  } | null;
+  bank_account: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface CreditCard {
+  id: string;
+  name: string;
+}
+
+interface BankAccount {
+  id: string;
+  name: string;
+}
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+};
 
 export default function Transactions() {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  // Form/Dialog states
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+
+  const fetchData = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const [transactionsRes, categoriesRes, cardsRes, accountsRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select(`
+            id, type, amount, description, date,
+            category_id, credit_card_id, bank_account_id,
+            is_installment, current_installment, total_installments,
+            category:categories(id, name, icon, color),
+            credit_card:credit_cards(id, name),
+            bank_account:bank_accounts(id, name)
+          `)
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('categories')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .order('name'),
+        supabase
+          .from('credit_cards')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('bank_accounts')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .order('name'),
+      ]);
+
+      if (transactionsRes.error) throw transactionsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+      if (cardsRes.error) throw cardsRes.error;
+      if (accountsRes.error) throw accountsRes.error;
+
+      setTransactions(transactionsRes.data as Transaction[] || []);
+      setCategories(categoriesRes.data || []);
+      setCreditCards(cardsRes.data || []);
+      setBankAccounts(accountsRes.data || []);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao carregar dados',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  const handleCreateTransaction = async (data: any) => {
+    if (!user) return;
+
+    const transactionData = {
+      user_id: user.id,
+      type: data.type,
+      amount: parseFloat(data.amount),
+      description: data.description,
+      date: format(data.date, 'yyyy-MM-dd'),
+      category_id: data.categoryId || null,
+      credit_card_id: data.creditCardId || null,
+      bank_account_id: data.bankAccountId || null,
+      is_installment: data.isInstallment,
+      total_installments: data.isInstallment ? data.totalInstallments : null,
+      current_installment: data.isInstallment ? 1 : null,
+    };
+
+    const { error } = await supabase.from('transactions').insert(transactionData);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao criar transação',
+        description: error.message,
+      });
+      throw error;
+    }
+
+    toast({
+      title: 'Transação criada',
+      description: 'A transação foi registrada com sucesso.',
+    });
+
+    fetchData();
+  };
+
+  const handleUpdateTransaction = async (data: any) => {
+    if (!user || !editingTransaction) return;
+
+    const { error } = await supabase
+      .from('transactions')
+      .update({
+        type: data.type,
+        amount: parseFloat(data.amount),
+        description: data.description,
+        date: format(data.date, 'yyyy-MM-dd'),
+        category_id: data.categoryId || null,
+        credit_card_id: data.creditCardId || null,
+        bank_account_id: data.bankAccountId || null,
+      })
+      .eq('id', editingTransaction.id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao atualizar transação',
+        description: error.message,
+      });
+      throw error;
+    }
+
+    toast({
+      title: 'Transação atualizada',
+      description: 'As alterações foram salvas.',
+    });
+
+    setEditingTransaction(null);
+    fetchData();
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!user || !deletingTransaction) return;
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', deletingTransaction.id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao excluir transação',
+        description: error.message,
+      });
+      throw error;
+    }
+
+    toast({
+      title: 'Transação excluída',
+      description: 'A transação foi removida.',
+    });
+
+    setDeletingTransaction(null);
+    fetchData();
+  };
+
+  const openEditForm = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setFormOpen(true);
+  };
+
+  const openDeleteDialog = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+    setDeleteDialogOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingTransaction(null);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setTypeFilter('all');
+    setCategoryFilter('all');
+    setDateRange(undefined);
+  };
+
+  const hasActiveFilters = searchQuery !== '' || typeFilter !== 'all' || categoryFilter !== 'all' || !!dateRange;
+
+  // Filtered transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      // Search filter
+      if (searchQuery && !t.description?.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      // Type filter
+      if (typeFilter !== 'all' && t.type !== typeFilter) {
+        return false;
+      }
+      // Category filter
+      if (categoryFilter !== 'all' && t.category_id !== categoryFilter) {
+        return false;
+      }
+      // Date range filter
+      if (dateRange?.from) {
+        const transDate = new Date(t.date);
+        if (transDate < dateRange.from) return false;
+        if (dateRange.to && transDate > dateRange.to) return false;
+      }
+      return true;
+    });
+  }, [transactions, searchQuery, typeFilter, categoryFilter, dateRange]);
+
+  // Summary
+  const summary = useMemo(() => {
+    const income = filteredTransactions
+      .filter((t) => t.type === 'income')
+      .reduce((acc, t) => acc + t.amount, 0);
+    const expense = filteredTransactions
+      .filter((t) => t.type === 'expense')
+      .reduce((acc, t) => acc + t.amount, 0);
+    return { income, expense, balance: income - expense };
+  }, [filteredTransactions]);
+
+  // Group by date
+  const groupedTransactions = useMemo(() => {
+    const groups: Record<string, Transaction[]> = {};
+    filteredTransactions.forEach((t) => {
+      const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(t);
+    });
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [filteredTransactions]);
+
   return (
     <DashboardLayout>
       <div className="space-y-6 pt-12 lg:pt-0">
-        <div className="space-y-1">
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Transações</h1>
-          <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Transações</h1>
+            <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
+          </div>
+          <Button 
+            onClick={() => setFormOpen(true)} 
+            className="bg-primary hover:bg-primary/90 gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Transação
+          </Button>
         </div>
-        <div className="flex items-center justify-center h-64 bg-card rounded-xl border border-border">
-          <p className="text-muted-foreground">Em breve: listagem completa de transações</p>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-income/20 flex items-center justify-center">
+                <ArrowUpRight className="w-5 h-5 text-income" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Receitas</p>
+                <p className="text-xl font-bold text-income">{formatCurrency(summary.income)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-expense/20 flex items-center justify-center">
+                <ArrowDownRight className="w-5 h-5 text-expense" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Despesas</p>
+                <p className="text-xl font-bold text-expense">{formatCurrency(summary.expense)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${summary.balance >= 0 ? 'bg-income/20' : 'bg-expense/20'}`}>
+                <Receipt className={`w-5 h-5 ${summary.balance >= 0 ? 'text-income' : 'text-expense'}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Saldo</p>
+                <p className={`text-xl font-bold ${summary.balance >= 0 ? 'text-income' : 'text-expense'}`}>
+                  {formatCurrency(summary.balance)}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Filters */}
+        <TransactionFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          typeFilter={typeFilter}
+          onTypeChange={setTypeFilter}
+          categoryFilter={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          categories={categories}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
+
+        {/* Content */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl border border-border">
+            <Receipt className="w-12 h-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium text-foreground mb-2">Nenhuma transação registrada</p>
+            <p className="text-muted-foreground mb-4">Comece registrando sua primeira transação</p>
+            <Button 
+              onClick={() => setFormOpen(true)} 
+              className="bg-primary hover:bg-primary/90 gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Nova Transação
+            </Button>
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl border border-border">
+            <Receipt className="w-12 h-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</p>
+            <p className="text-muted-foreground">Tente ajustar os filtros</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groupedTransactions.map(([dateKey, dayTransactions]) => (
+              <div key={dateKey} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    {format(new Date(dateKey), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                  </h3>
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-sm text-muted-foreground">
+                    {dayTransactions.length} {dayTransactions.length === 1 ? 'transação' : 'transações'}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {dayTransactions.map((transaction) => (
+                    <TransactionCard
+                      key={transaction.id}
+                      transaction={transaction}
+                      onEdit={openEditForm}
+                      onDelete={openDeleteDialog}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Form Dialog */}
+      <TransactionForm
+        open={formOpen}
+        onClose={closeForm}
+        onSubmit={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}
+        categories={categories}
+        creditCards={creditCards}
+        bankAccounts={bankAccounts}
+        transaction={editingTransaction}
+      />
+
+      {/* Delete Dialog */}
+      <DeleteTransactionDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setDeletingTransaction(null);
+        }}
+        onConfirm={handleDeleteTransaction}
+        transaction={deletingTransaction}
+      />
     </DashboardLayout>
   );
 }
