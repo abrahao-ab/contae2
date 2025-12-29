@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowUpRight, ArrowDownRight, Plus, Receipt } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Plus, Receipt, User, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Transaction {
   id: string;
@@ -13,6 +14,8 @@ interface Transaction {
   category?: string;
   date: string;
   source?: string;
+  owner_type?: 'individual' | 'shared';
+  couple_id?: string | null;
 }
 
 interface RecentTransactionsProps {
@@ -80,7 +83,31 @@ export function RecentTransactions({ transactions, onAddTransaction, onViewAll }
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm sm:text-base text-card-foreground truncate">{transaction.description}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium text-sm sm:text-base text-card-foreground truncate">{transaction.description}</p>
+                      {/* Owner type indicator */}
+                      {transaction.couple_id && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={cn(
+                              "flex items-center justify-center w-4 h-4 rounded-full shrink-0",
+                              transaction.owner_type === 'shared' 
+                                ? "bg-pink-500/20 text-pink-500" 
+                                : "bg-primary/20 text-primary"
+                            )}>
+                              {transaction.owner_type === 'shared' ? (
+                                <Heart className="w-2.5 h-2.5" />
+                              ) : (
+                                <User className="w-2.5 h-2.5" />
+                              )}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {transaction.owner_type === 'shared' ? 'Compartilhado' : 'Individual'}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-muted-foreground">
                       <span>{format(new Date(transaction.date), "dd MMM", { locale: ptBR })}</span>
                       {transaction.category && (

@@ -1,10 +1,11 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { Pencil, Trash2, ArrowUpRight, ArrowDownRight, CreditCard, Building2, Repeat, Layers } from 'lucide-react';
+import { Pencil, Trash2, ArrowUpRight, ArrowDownRight, CreditCard, Building2, Repeat, Layers, User, Users, Heart } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as LucideIcons from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Transaction {
   id: string;
@@ -16,6 +17,8 @@ interface Transaction {
   current_installment: number | null;
   total_installments: number | null;
   parent_transaction_id?: string | null;
+  owner_type?: 'individual' | 'shared';
+  couple_id?: string | null;
   category: {
     id: string;
     name: string;
@@ -97,6 +100,28 @@ export function TransactionCard({ transaction, onEdit, onDelete, onViewInstallme
             <p className="font-medium text-sm sm:text-base text-card-foreground truncate">
               {transaction.description || 'Sem descrição'}
             </p>
+            {/* Owner type indicator */}
+            {transaction.couple_id && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={cn(
+                    "flex items-center justify-center w-5 h-5 rounded-full shrink-0",
+                    transaction.owner_type === 'shared' 
+                      ? "bg-pink-500/20 text-pink-500" 
+                      : "bg-primary/20 text-primary"
+                  )}>
+                    {transaction.owner_type === 'shared' ? (
+                      <Heart className="w-3 h-3" />
+                    ) : (
+                      <User className="w-3 h-3" />
+                    )}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {transaction.owner_type === 'shared' ? 'Compartilhado' : 'Individual'}
+                </TooltipContent>
+              </Tooltip>
+            )}
             {hasInstallments && (
               <button
                 onClick={(e) => {
