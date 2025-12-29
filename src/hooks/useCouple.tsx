@@ -66,6 +66,7 @@ interface CoupleContextType {
   canInvitePartner: boolean;
   createCouple: () => Promise<{ success: boolean; error?: string }>;
   invitePartner: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  cancelInvite: (inviteId: string) => Promise<{ success: boolean; error?: string }>;
   acceptInvite: (inviteId: string) => Promise<{ success: boolean; error?: string }>;
   rejectInvite: (inviteId: string) => Promise<{ success: boolean; error?: string }>;
   leaveCouple: () => Promise<{ success: boolean; error?: string }>;
@@ -258,13 +259,48 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const cancelInvite = async (inviteId: string) => {
+    if (!user) {
+      return { success: false, error: 'Usuário não autenticado' };
+    }
+
+    try {
+      await supabase
+        .from('couple_invites')
+        .update({ status: 'cancelled' })
+        .eq('id', inviteId)
+        .eq('inviter_id', user.id);
+
+      await fetchCoupleData();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const sendWhatsAppNotification = async (phone: string, message: string) => {
+    try {
+      const response = await supabase.functions.invoke('send-whatsapp', {
+        body: { phone, message },
+      });
+      
+      if (response.error) {
+        console.error('Error sending WhatsApp notification:', response.error);
+      } else {
+        console.log('WhatsApp notification sent successfully');
+      }
+    } catch (error) {
+      console.error('Error sending WhatsApp notification:', error);
+    }
+  };
+
   const acceptInvite = async (inviteId: string) => {
     if (!user) {
       return { success: false, error: 'Usuário não autenticado' };
     }
 
     try {
-      // Get invite
+      // Get invite with inviter info
       const { data: invite } = await supabase
         .from('couple_invites')
         .select('*')
@@ -323,6 +359,31 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
           .in('invitee_phone', phones)
           .eq('status', 'pending')
           .neq('id', inviteId);
+      }
+
+      // Get inviter's WhatsApp number to send notification
+      const { data: inviterPhone } = await supabase
+        .from('whatsapp_numbers')
+        .select('phone')
+        .eq('user_id', invite.inviter_id)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (inviterPhone) {
+        // Get accepter's name from profile
+        const { data: accepterProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const accepterName = accepterProfile?.full_name || 'Seu parceiro(a)';
+        
+        // Send WhatsApp notification to inviter
+        sendWhatsAppNotification(
+          inviterPhone.phone,
+          `💕 *Contaê - Conta Casal*\n\n${accepterName} aceitou seu convite para a Conta Casal!\n\nAgora vocês podem gerenciar as finanças juntos. Acesse o app para configurar seus perfis e metas.`
+        );
       }
 
       await fetchCoupleData();
@@ -509,6 +570,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         canInvitePartner,
         createCouple,
         invitePartner,
+        cancelInvite,
         acceptInvite,
         rejectInvite,
         leaveCouple,
