@@ -80,6 +80,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Contaê Brand Colors
+        brand: {
+          green: "hsl(91 72% 62%)",         // #A6E35A
+          dark: "hsl(159 68% 18%)",          // #0F4F3A
+          secondary: "hsl(157 55% 27%)",     // #1F6A52
+          soft: "hsl(150 30% 56%)",          // #6FAF8F
+          gradient: "hsl(159 46% 34%)",      // #2E7F63
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
