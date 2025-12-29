@@ -109,34 +109,66 @@ export function useTransactions() {
         ? getInvoiceDueDate(new Date(data.date), closingDay, dueDay)
         : new Date(data.date);
 
-      // Generate a unique group ID for this installment set
-      const groupId = crypto.randomUUID();
-
-      const transactionsToInsert = [];
-      for (let i = 0; i < totalInstallments; i++) {
-        const installmentDate = new Date(firstDueDate);
-        installmentDate.setMonth(installmentDate.getMonth() + i);
-
-        transactionsToInsert.push({
+      // Insert first installment to get its ID
+      const firstInstallmentDate = new Date(firstDueDate);
+      const { data: firstTransaction, error: firstError } = await supabase
+        .from('transactions')
+        .insert({
           user_id: userId,
           type: data.type,
           amount: installmentAmount,
-          description: `${data.description} (${i + 1}/${totalInstallments})`,
-          date: format(installmentDate, 'yyyy-MM-dd'),
+          description: `${data.description} (1/${totalInstallments})`,
+          date: format(firstInstallmentDate, 'yyyy-MM-dd'),
           purchase_date: isCreditCardExpense ? originalPurchaseDate : null,
           category_id: data.categoryId || null,
           credit_card_id: data.creditCardId || null,
           bank_account_id: data.bankAccountId || null,
           is_installment: true,
           total_installments: totalInstallments,
-          current_installment: i + 1,
-          parent_transaction_id: groupId, // Link all installments together
+          current_installment: 1,
           source: 'web' as const,
-        });
-      }
+        })
+        .select('id')
+        .single();
 
-      const { error } = await supabase.from('transactions').insert(transactionsToInsert);
-      if (error) throw error;
+      if (firstError) throw firstError;
+
+      const parentId = firstTransaction.id;
+
+      // Update first transaction to reference itself as parent
+      await supabase
+        .from('transactions')
+        .update({ parent_transaction_id: parentId })
+        .eq('id', parentId);
+
+      // Insert remaining installments with parent_transaction_id
+      if (totalInstallments > 1) {
+        const remainingTransactions = [];
+        for (let i = 1; i < totalInstallments; i++) {
+          const installmentDate = new Date(firstDueDate);
+          installmentDate.setMonth(installmentDate.getMonth() + i);
+
+          remainingTransactions.push({
+            user_id: userId,
+            type: data.type,
+            amount: installmentAmount,
+            description: `${data.description} (${i + 1}/${totalInstallments})`,
+            date: format(installmentDate, 'yyyy-MM-dd'),
+            purchase_date: isCreditCardExpense ? originalPurchaseDate : null,
+            category_id: data.categoryId || null,
+            credit_card_id: data.creditCardId || null,
+            bank_account_id: data.bankAccountId || null,
+            is_installment: true,
+            total_installments: totalInstallments,
+            current_installment: i + 1,
+            parent_transaction_id: parentId,
+            source: 'web' as const,
+          });
+        }
+
+        const { error } = await supabase.from('transactions').insert(remainingTransactions);
+        if (error) throw error;
+      }
     } else {
       // Single transaction - use due date if credit card expense
       const transactionDate = isCreditCardExpense
@@ -264,11 +296,14 @@ export function useTransactions() {
     const isInstallment = transaction.is_installment && transaction.parent_transaction_id;
     
     if (isInstallment && deleteAllInstallments && transaction.parent_transaction_id) {
-      // Get all related installments to calculate total amount for credit card balance
+      const parentId = transaction.parent_transaction_id;
+      
+      // Get all related installments (including the parent itself)
+      // We need to get transactions where parent_transaction_id = parentId OR id = parentId
       const { data: allInstallments } = await supabase
         .from('transactions')
         .select('id, amount, credit_card_id, type')
-        .eq('parent_transaction_id', transaction.parent_transaction_id)
+        .or(`parent_transaction_id.eq.${parentId},id.eq.${parentId}`)
         .eq('user_id', userId);
 
       if (allInstallments && allInstallments.length > 0) {
@@ -293,11 +328,19 @@ export function useTransactions() {
           }
         }
 
-        // Delete all installments
+        // First delete child installments (those with parent_transaction_id)
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('parent_transaction_id', parentId)
+          .neq('id', parentId)
+          .eq('user_id', userId);
+
+        // Then delete the parent transaction
         const { error } = await supabase
           .from('transactions')
           .delete()
-          .eq('parent_transaction_id', transaction.parent_transaction_id)
+          .eq('id', parentId)
           .eq('user_id', userId);
 
         if (error) throw error;
