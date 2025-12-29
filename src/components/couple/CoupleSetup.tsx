@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Heart, UserPlus, Loader2, Check, X, Send } from 'lucide-react';
+import { Heart, UserPlus, Loader2, Check, X, Send, Clock, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface CoupleSetupProps {
@@ -18,6 +18,7 @@ export function CoupleSetup({ open, onClose }: CoupleSetupProps) {
     canInvitePartner, 
     createCouple, 
     invitePartner,
+    cancelInvite,
     pendingInvites,
     receivedInvites,
     acceptInvite,
@@ -26,6 +27,7 @@ export function CoupleSetup({ open, onClose }: CoupleSetupProps) {
   } = useCouple();
   
   const [loading, setLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
 
   const handleCreateCouple = async () => {
@@ -76,6 +78,25 @@ export function CoupleSetup({ open, onClose }: CoupleSetupProps) {
     }
   };
 
+  const handleCancelInvite = async (inviteId: string) => {
+    setCancellingId(inviteId);
+    const result = await cancelInvite(inviteId);
+    setCancellingId(null);
+
+    if (result.success) {
+      toast({
+        title: 'Convite cancelado',
+        description: 'O convite foi cancelado com sucesso.',
+      });
+    } else {
+      toast({
+        title: 'Erro',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleAccept = async (inviteId: string) => {
     setLoading(true);
     const result = await acceptInvite(inviteId);
@@ -103,6 +124,18 @@ export function CoupleSetup({ open, onClose }: CoupleSetupProps) {
         title: 'Convite recusado',
       });
     }
+  };
+
+  const formatPhone = (phone: string) => {
+    // Format as +55 11 99999-9999
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 13) {
+      return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+    }
+    if (cleaned.length === 12) {
+      return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
+    }
+    return phone;
   };
 
   return (
@@ -198,11 +231,41 @@ export function CoupleSetup({ open, onClose }: CoupleSetupProps) {
                   Enviar Convite
                 </Button>
 
+                {/* Pending Invites List */}
                 {pendingInvites.length > 0 && (
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      Convites pendentes: {pendingInvites.length}
+                  <div className="pt-3 border-t border-border space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      Convites Pendentes
                     </p>
+                    {pendingInvites.map((invite) => (
+                      <div 
+                        key={invite.id} 
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {formatPhone(invite.invitee_phone)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Enviado em {new Date(invite.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleCancelInvite(invite.id)}
+                          disabled={cancellingId === invite.id}
+                        >
+                          {cancellingId === invite.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

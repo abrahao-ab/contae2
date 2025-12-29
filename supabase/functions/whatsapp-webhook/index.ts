@@ -2,15 +2,35 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, apikey',
 }
 
-interface WhatsAppMessage {
-  phone: string
-  message: string
-  type: 'text' | 'voice' | 'image'
-  transcription?: string
-  extractedText?: string
+interface EvolutionWebhookMessage {
+  event: string
+  instance: string
+  data: {
+    key: {
+      remoteJid: string
+      fromMe: boolean
+      id: string
+    }
+    pushName?: string
+    message?: {
+      conversation?: string
+      extendedTextMessage?: {
+        text: string
+      }
+      audioMessage?: {
+        url: string
+        mimetype: string
+      }
+      imageMessage?: {
+        url: string
+        caption?: string
+      }
+    }
+    messageType?: string
+  }
 }
 
 interface TransactionData {
@@ -21,58 +41,20 @@ interface TransactionData {
   date?: string
 }
 
-// Verifica assinatura HMAC para autenticar webhooks
-async function verifyWebhookSignature(req: Request, body: string): Promise<boolean> {
-  const signature = req.headers.get('x-webhook-signature')
-  const secret = Deno.env.get('WEBHOOK_SECRET')
-  
-  // Se não tiver secret configurado, rejeita por segurança
-  if (!secret) {
-    console.error('WEBHOOK_SECRET not configured')
-    return false
-  }
-  
-  // Se não tiver signature, rejeita
-  if (!signature) {
-    console.error('Missing x-webhook-signature header')
-    return false
-  }
-  
-  try {
-    const encoder = new TextEncoder()
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
-    
-    const signatureBytes = await crypto.subtle.sign('HMAC', key, encoder.encode(body))
-    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
-    
-    return signature === expectedSignature
-  } catch (error) {
-    console.error('Error verifying signature:', error)
-    return false
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Ler body como texto para verificar assinatura
-    const bodyText = await req.text()
+    const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')
+    const requestApiKey = req.headers.get('apikey')
     
-    // Verificar assinatura HMAC
-    const isValid = await verifyWebhookSignature(req, bodyText)
-    if (!isValid) {
-      console.error('Invalid webhook signature')
+    // Verificar apikey da Evolution API
+    if (evolutionApiKey && requestApiKey !== evolutionApiKey) {
+      console.error('Invalid API key')
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - Invalid signature' }),
+        JSON.stringify({ error: 'Unauthorized - Invalid API key' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -82,18 +64,60 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const body: WhatsAppMessage = JSON.parse(bodyText)
-    console.log('Received WhatsApp message:', JSON.stringify(body))
+    const body: EvolutionWebhookMessage = await req.json()
+    console.log('Received Evolution API webhook:', JSON.stringify(body))
 
-    const { phone, message, type, transcription, extractedText } = body
-    const content = type === 'voice' ? transcription : type === 'image' ? extractedText : message
+    // Verificar se é um evento de mensagem recebida
+    if (body.event !== 'messages.upsert' || body.data?.key?.fromMe) {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Event ignored' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { data } = body
+    const remoteJid = data.key.remoteJid
+    
+    // Extrair número de telefone (formato: 5511999999999@s.whatsapp.net)
+    const phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
+    
+    // Extrair conteúdo da mensagem
+    let content = ''
+    let messageType: 'text' | 'voice' | 'image' = 'text'
+    
+    if (data.message?.conversation) {
+      content = data.message.conversation
+    } else if (data.message?.extendedTextMessage?.text) {
+      content = data.message.extendedTextMessage.text
+    } else if (data.message?.audioMessage) {
+      messageType = 'voice'
+      // TODO: Implementar transcrição de áudio
+      console.log('Audio message received - transcription not implemented')
+      return new Response(
+        JSON.stringify({ success: true, message: 'Audio messages not yet supported' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } else if (data.message?.imageMessage) {
+      messageType = 'image'
+      content = data.message.imageMessage.caption || ''
+      if (!content) {
+        console.log('Image message without caption')
+        return new Response(
+          JSON.stringify({ success: true, message: 'Image without caption' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
 
     if (!phone || !content) {
+      console.log('Missing phone or content:', { phone, content })
       return new Response(
         JSON.stringify({ error: 'Phone and message content are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log(`Processing message from ${phone}: ${content}`)
 
     // Find user by phone in whatsapp_numbers table
     const { data: whatsappNumber, error: whatsappError } = await supabase
@@ -104,12 +128,16 @@ Deno.serve(async (req) => {
 
     if (whatsappError || !whatsappNumber) {
       console.log('User not found for phone:', phone)
+      
+      // Enviar resposta via Evolution API
+      await sendEvolutionMessage(phone, 'Usuário não encontrado. Por favor, cadastre seu telefone no app em Configurações > WhatsApp.')
+      
       return new Response(
         JSON.stringify({ 
           error: 'User not found',
-          message: 'Usuário não encontrado. Por favor, cadastre seu telefone no app em Configurações > WhatsApp.'
+          message: 'Usuário não encontrado'
         }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -117,10 +145,12 @@ Deno.serve(async (req) => {
     const parsed = parseTransaction(content)
     
     if (!parsed) {
+      await sendEvolutionMessage(phone, 'Não consegui entender a transação. Tente algo como: "gastei 50 reais com almoço" ou "recebi 1000 de salário"')
+      
       return new Response(
         JSON.stringify({
           success: false,
-          message: 'Não consegui entender a transação. Tente algo como: "gastei 50 reais com almoço" ou "recebi 1000 de salário"'
+          message: 'Could not parse transaction'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -142,8 +172,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const source = type === 'voice' ? 'whatsapp_voice' : 
-                   type === 'image' ? 'whatsapp_image' : 'whatsapp_text'
+    const source = messageType === 'image' ? 'whatsapp_image' : 'whatsapp_text'
 
     const { data: transaction, error: transactionError } = await supabase
       .from('transactions')
@@ -161,6 +190,8 @@ Deno.serve(async (req) => {
 
     if (transactionError) {
       console.error('Error creating transaction:', transactionError)
+      await sendEvolutionMessage(phone, 'Erro ao registrar transação. Tente novamente.')
+      
       return new Response(
         JSON.stringify({ error: 'Failed to create transaction', details: transactionError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -172,6 +203,9 @@ Deno.serve(async (req) => {
       : `✅ Despesa registrada: R$ ${parsed.amount.toFixed(2)} - ${parsed.description}`
 
     console.log('Transaction created successfully:', transaction.id)
+    
+    // Enviar confirmação via Evolution API
+    await sendEvolutionMessage(phone, responseMessage)
 
     return new Response(
       JSON.stringify({
@@ -196,6 +230,40 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+async function sendEvolutionMessage(phone: string, message: string) {
+  const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL')
+  const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')
+  const evolutionInstance = Deno.env.get('EVOLUTION_INSTANCE')
+
+  if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
+    console.error('Evolution API credentials not configured')
+    return
+  }
+
+  try {
+    const response = await fetch(`${evolutionApiUrl}/message/sendText/${evolutionInstance}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': evolutionApiKey,
+      },
+      body: JSON.stringify({
+        number: phone,
+        text: message,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Error sending Evolution message:', errorText)
+    } else {
+      console.log('Evolution message sent successfully')
+    }
+  } catch (error) {
+    console.error('Error sending Evolution message:', error)
+  }
+}
 
 function parseTransaction(text: string): TransactionData | null {
   const normalizedText = text.toLowerCase().trim()
