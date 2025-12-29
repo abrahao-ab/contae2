@@ -7,6 +7,7 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
 import { CategoryChart } from '@/components/dashboard/CategoryChart';
+import { ExportReport } from '@/components/dashboard/ExportReport';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { CreditCardForm } from '@/components/cards/CreditCardForm';
 import { useAuth } from '@/hooks/useAuth';
@@ -263,6 +264,12 @@ export default function Dashboard() {
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground">Visão geral das suas finanças</p>
           </div>
+          <ExportReport
+            transactions={allTransactions}
+            categories={categories}
+            dateRange={{ from: dateRange?.from, to: dateRange?.to }}
+            stats={stats}
+          />
         </div>
 
         {/* Credit Card Alerts */}
