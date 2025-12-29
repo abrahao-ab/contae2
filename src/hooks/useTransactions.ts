@@ -97,6 +97,9 @@ export function useTransactions() {
       dueDay = selectedCard?.due_day || null;
     }
 
+    // Store original purchase date for credit card transactions
+    const originalPurchaseDate = format(data.date, 'yyyy-MM-dd');
+
     // If installment, create multiple transactions (one per month)
     if (isInstallment && totalInstallments) {
       const transactionsToInsert = [];
@@ -114,6 +117,7 @@ export function useTransactions() {
           amount: installmentAmount,
           description: `${data.description} (${i + 1}/${totalInstallments})`,
           date: format(installmentDate, 'yyyy-MM-dd'),
+          purchase_date: isCreditCardExpense ? originalPurchaseDate : null,
           category_id: data.categoryId || null,
           credit_card_id: data.creditCardId || null,
           bank_account_id: data.bankAccountId || null,
@@ -138,6 +142,7 @@ export function useTransactions() {
         amount: totalAmount,
         description: data.description,
         date: format(transactionDate, 'yyyy-MM-dd'),
+        purchase_date: isCreditCardExpense ? originalPurchaseDate : null,
         category_id: data.categoryId || null,
         credit_card_id: data.creditCardId || null,
         bank_account_id: data.bankAccountId || null,
