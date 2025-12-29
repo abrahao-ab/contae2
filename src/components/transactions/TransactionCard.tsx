@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { Pencil, Trash2, ArrowUpRight, ArrowDownRight, CreditCard, Building2, Repeat } from 'lucide-react';
+import { Pencil, Trash2, ArrowUpRight, ArrowDownRight, CreditCard, Building2, Repeat, Layers } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as LucideIcons from 'lucide-react';
@@ -15,6 +15,7 @@ interface Transaction {
   is_installment: boolean | null;
   current_installment: number | null;
   total_installments: number | null;
+  parent_transaction_id?: string | null;
   category: {
     id: string;
     name: string;
@@ -35,6 +36,7 @@ interface TransactionCardProps {
   transaction: Transaction;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
+  onViewInstallments?: (transaction: Transaction) => void;
 }
 
 const getIcon = (iconName: string | null) => {
@@ -69,9 +71,10 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export function TransactionCard({ transaction, onEdit, onDelete }: TransactionCardProps) {
+export function TransactionCard({ transaction, onEdit, onDelete, onViewInstallments }: TransactionCardProps) {
   const isIncome = transaction.type === 'income';
   const CategoryIcon = transaction.category ? getIcon(transaction.category.icon) : LucideIcons.CircleDot;
+  const hasInstallments = transaction.is_installment && transaction.parent_transaction_id;
 
   const cardContent = (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-card border border-border hover:shadow-md transition-all group">
@@ -94,11 +97,17 @@ export function TransactionCard({ transaction, onEdit, onDelete }: TransactionCa
             <p className="font-medium text-sm sm:text-base text-card-foreground truncate">
               {transaction.description || 'Sem descrição'}
             </p>
-            {transaction.is_installment && transaction.current_installment && transaction.total_installments && (
-              <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-0.5 shrink-0">
-                <Repeat className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            {hasInstallments && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewInstallments?.(transaction);
+                }}
+                className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 flex items-center gap-0.5 shrink-0 transition-colors cursor-pointer"
+              >
+                <Layers className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 {transaction.current_installment}/{transaction.total_installments}
-              </span>
+              </button>
             )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
