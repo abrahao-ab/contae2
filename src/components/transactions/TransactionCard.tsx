@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { Pencil, Trash2, ArrowUpRight, ArrowDownRight, CreditCard, Building2, Repeat } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -72,75 +73,64 @@ export function TransactionCard({ transaction, onEdit, onDelete }: TransactionCa
   const isIncome = transaction.type === 'income';
   const CategoryIcon = transaction.category ? getIcon(transaction.category.icon) : LucideIcons.CircleDot;
 
-  return (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:shadow-md transition-all group">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+  const cardContent = (
+    <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-card border border-border hover:shadow-md transition-all group">
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
         {/* Category Icon */}
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           style={{ backgroundColor: transaction.category?.color || (isIncome ? '#22c55e' : '#ef4444') }}
         >
           {isIncome ? (
-            <ArrowUpRight className="w-5 h-5 text-white" />
+            <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           ) : (
-            <CategoryIcon className="w-5 h-5 text-white" />
+            <CategoryIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           )}
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="font-medium text-card-foreground truncate">
+            <p className="font-medium text-sm sm:text-base text-card-foreground truncate">
               {transaction.description || 'Sem descrição'}
             </p>
             {transaction.is_installment && transaction.current_installment && transaction.total_installments && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-1 shrink-0">
-                <Repeat className="w-3 h-3" />
+              <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-0.5 shrink-0">
+                <Repeat className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 {transaction.current_installment}/{transaction.total_installments}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{format(new Date(transaction.date), "dd MMM yyyy", { locale: ptBR })}</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
+            <span>{format(new Date(transaction.date), "dd MMM", { locale: ptBR })}</span>
             {transaction.category && (
               <>
-                <span>•</span>
-                <span>{transaction.category.name}</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="hidden sm:inline">{transaction.category.name}</span>
               </>
             )}
             {transaction.credit_card && (
-              <>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <CreditCard className="w-3 h-3" />
-                  {transaction.credit_card.name}
-                </span>
-              </>
-            )}
-            {transaction.bank_account && (
-              <>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />
-                  {transaction.bank_account.name}
-                </span>
-              </>
+              <span className="flex items-center gap-0.5 sm:gap-1">
+                <CreditCard className="w-3 h-3" />
+                <span className="hidden sm:inline">{transaction.credit_card.name}</span>
+              </span>
             )}
           </div>
         </div>
       </div>
 
       {/* Amount & Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <p className={cn(
-          'font-semibold text-lg',
+          'font-semibold text-sm sm:text-lg',
           isIncome ? 'text-income' : 'text-expense'
         )}>
           {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
         </p>
 
+        {/* Desktop actions - hidden on mobile (use swipe instead) */}
         <div className={cn(
-          'flex items-center gap-1 transition-opacity',
+          'hidden sm:flex items-center gap-1 transition-opacity',
           'opacity-0 group-hover:opacity-100'
         )}>
           <Button
@@ -162,5 +152,25 @@ export function TransactionCard({ transaction, onEdit, onDelete }: TransactionCa
         </div>
       </div>
     </div>
+  );
+
+  // On mobile, wrap with swipeable row
+  return (
+    <>
+      {/* Mobile: Swipeable */}
+      <div className="sm:hidden">
+        <SwipeableRow
+          onEdit={() => onEdit(transaction)}
+          onDelete={() => onDelete(transaction)}
+        >
+          {cardContent}
+        </SwipeableRow>
+      </div>
+      
+      {/* Desktop: Regular */}
+      <div className="hidden sm:block">
+        {cardContent}
+      </div>
+    </>
   );
 }
