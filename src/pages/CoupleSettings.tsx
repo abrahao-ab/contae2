@@ -80,6 +80,13 @@ export default function CoupleSettings() {
     partner, 
     budgets, 
     hasCouple,
+    isCouplePlan,
+    createCouple,
+    invitePartner,
+    pendingInvites,
+    receivedInvites,
+    acceptInvite,
+    rejectInvite,
     updateMemberProfile, 
     createBudget, 
     updateBudget,
@@ -98,6 +105,10 @@ export default function CoupleSettings() {
   const [budgetLimit, setBudgetLimit] = useState('');
   const [budgetThreshold, setBudgetThreshold] = useState('80');
   const [savingBudget, setSavingBudget] = useState(false);
+  const [creatingCouple, setCreatingCouple] = useState(false);
+  const [invitePhone, setInvitePhone] = useState('');
+  const [sendingInvite, setSendingInvite] = useState(false);
+
 
   useEffect(() => {
     if (currentMember) {
@@ -132,6 +143,79 @@ export default function CoupleSettings() {
       });
     }
   }, [loading, isCouple, navigate, toast]);
+
+  const handleCreateCouple = async () => {
+    setCreatingCouple(true);
+    const result = await createCouple();
+    setCreatingCouple(false);
+
+    if (result.success) {
+      toast({
+        title: 'Casal criado!',
+        description: 'Agora você pode convidar seu parceiro(a).',
+      });
+    } else {
+      toast({
+        title: 'Erro ao criar casal',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleInvitePartner = async () => {
+    if (!invitePhone.trim()) {
+      toast({
+        title: 'Telefone obrigatório',
+        description: 'Insira o número do WhatsApp do seu parceiro(a).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingInvite(true);
+    const result = await invitePartner(invitePhone.trim());
+    setSendingInvite(false);
+
+    if (result.success) {
+      toast({
+        title: 'Convite enviado!',
+        description: 'Seu parceiro(a) receberá o convite.',
+      });
+      setInvitePhone('');
+    } else {
+      toast({
+        title: 'Erro ao enviar convite',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    const result = await acceptInvite(inviteId);
+    if (result.success) {
+      toast({
+        title: 'Convite aceito!',
+        description: 'Você agora faz parte do casal.',
+      });
+    } else {
+      toast({
+        title: 'Erro ao aceitar convite',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRejectInvite = async (inviteId: string) => {
+    const result = await rejectInvite(inviteId);
+    if (result.success) {
+      toast({
+        title: 'Convite recusado',
+      });
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!nickname.trim()) {
@@ -266,20 +350,78 @@ export default function CoupleSettings() {
   if (!hasCouple) {
     return (
       <DashboardLayout>
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center">
+              <Heart className="w-6 h-6 text-pink-500" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Configurar Casal</h1>
+              <p className="text-muted-foreground">Configure sua conta de casal</p>
+            </div>
+          </div>
+
+          {/* Received Invites */}
+          {receivedInvites.length > 0 && (
+            <Card className="border-pink-500/30 bg-pink-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-pink-500">
+                  <Heart className="w-5 h-5" />
+                  Convites Recebidos
+                </CardTitle>
+                <CardDescription>
+                  Você tem convites pendentes para fazer parte de um casal
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {receivedInvites.map((invite) => (
+                  <div key={invite.id} className="flex items-center justify-between p-4 rounded-xl bg-background">
+                    <div>
+                      <p className="font-medium text-foreground">Convite de casal</p>
+                      <p className="text-sm text-muted-foreground">
+                        Recebido em {new Date(invite.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleRejectInvite(invite.id)}
+                      >
+                        Recusar
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => handleAcceptInvite(invite.id)}
+                      >
+                        Aceitar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Create Couple */}
           <Card>
             <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Heart className="w-8 h-8 text-muted-foreground" />
+              <div className="mx-auto w-16 h-16 rounded-full bg-pink-500/10 flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-pink-500" />
               </div>
-              <CardTitle>Nenhum casal configurado</CardTitle>
+              <CardTitle>Criar Conta Casal</CardTitle>
               <CardDescription>
-                Você ainda não está vinculado a um casal. Configure seu casal nas configurações gerais.
+                Crie sua conta de casal e convide seu parceiro(a) para compartilhar finanças
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
-              <Button onClick={() => navigate('/settings')}>
-                Ir para Configurações
+              <Button 
+                onClick={handleCreateCouple} 
+                disabled={creatingCouple}
+                className="bg-pink-500 hover:bg-pink-600"
+              >
+                {creatingCouple ? 'Criando...' : 'Criar Conta Casal'}
               </Button>
             </CardContent>
           </Card>
@@ -356,8 +498,8 @@ export default function CoupleSettings() {
           </CardContent>
         </Card>
 
-        {/* Partner Info */}
-        {partner && (
+        {/* Partner Info or Invite */}
+        {partner ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -385,6 +527,46 @@ export default function CoupleSettings() {
                   <Badge variant="secondary" className="ml-auto">Proprietário</Badge>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-dashed border-2 border-pink-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-pink-500" />
+                Convidar Parceiro(a)
+              </CardTitle>
+              <CardDescription>
+                Seu casal ainda está incompleto. Convide seu parceiro(a) para compartilhar finanças.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pendingInvites.length > 0 ? (
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <p className="text-sm text-muted-foreground mb-2">Convite pendente para:</p>
+                  {pendingInvites.map((invite) => (
+                    <div key={invite.id} className="flex items-center justify-between">
+                      <span className="font-medium text-foreground">{invite.invitee_phone}</span>
+                      <Badge variant="secondary">Aguardando resposta</Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="Número do WhatsApp (ex: 85999999999)"
+                    value={invitePhone}
+                    onChange={(e) => setInvitePhone(e.target.value)}
+                  />
+                  <Button 
+                    onClick={handleInvitePartner} 
+                    disabled={sendingInvite}
+                    className="bg-pink-500 hover:bg-pink-600"
+                  >
+                    {sendingInvite ? 'Enviando...' : 'Convidar'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
