@@ -52,19 +52,21 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Find user by phone
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Find user by phone in whatsapp_numbers table
+    const { data: whatsappNumber, error: whatsappError } = await supabase
+      .from('whatsapp_numbers')
       .select('user_id')
       .eq('phone', phone)
       .single()
 
-    if (profileError || !profile) {
+    if (whatsappError || !whatsappNumber) {
       return new Response(
         JSON.stringify({ error: 'User not found', message: 'Usuário não encontrado para este telefone' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const userId = whatsappNumber.user_id
 
     // Find category if provided
     let categoryId = null
@@ -72,7 +74,7 @@ Deno.serve(async (req) => {
       const { data: categories } = await supabase
         .from('categories')
         .select('id, name')
-        .eq('user_id', profile.user_id)
+        .eq('user_id', userId)
 
       if (categories) {
         const matchedCategory = categories.find(
@@ -89,7 +91,7 @@ Deno.serve(async (req) => {
     const { data: transaction, error: transactionError } = await supabase
       .from('transactions')
       .insert({
-        user_id: profile.user_id,
+        user_id: userId,
         amount: Math.abs(amount),
         type,
         description: description || (type === 'income' ? 'Receita' : 'Despesa'),

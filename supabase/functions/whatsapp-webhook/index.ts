@@ -48,25 +48,25 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Find user by phone
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Find user by phone in whatsapp_numbers table
+    const { data: whatsappNumber, error: whatsappError } = await supabase
+      .from('whatsapp_numbers')
       .select('user_id')
       .eq('phone', phone)
       .single()
 
-    if (profileError || !profile) {
+    if (whatsappError || !whatsappNumber) {
       console.log('User not found for phone:', phone)
       return new Response(
         JSON.stringify({ 
           error: 'User not found',
-          message: 'Usuário não encontrado. Por favor, cadastre seu telefone no app.'
+          message: 'Usuário não encontrado. Por favor, cadastre seu telefone no app em Configurações > WhatsApp.'
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const userId = profile.user_id
+    const userId = whatsappNumber.user_id
 
     // Parse transaction from message content
     const parsed = parseTransaction(content)

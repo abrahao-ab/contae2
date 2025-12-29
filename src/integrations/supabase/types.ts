@@ -165,6 +165,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
           created_at: string
           full_name: string | null
           id: string
@@ -173,6 +174,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
           full_name?: string | null
           id?: string
@@ -181,6 +183,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
           created_at?: string
           full_name?: string | null
           id?: string
@@ -300,6 +303,30 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_numbers: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          phone: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          phone?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -314,6 +341,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_type: "free" | "paid" | "couple"
       app_role: "admin" | "user"
       installment_status: "pending" | "paid" | "overdue"
       transaction_source:
@@ -449,6 +477,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["free", "paid", "couple"],
       app_role: ["admin", "user"],
       installment_status: ["pending", "paid", "overdue"],
       transaction_source: [

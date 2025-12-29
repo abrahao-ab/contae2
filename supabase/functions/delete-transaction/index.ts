@@ -33,26 +33,28 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Find user by phone
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Find user by phone in whatsapp_numbers table
+    const { data: whatsappNumber, error: whatsappError } = await supabase
+      .from('whatsapp_numbers')
       .select('user_id')
       .eq('phone', phone)
       .single()
 
-    if (profileError || !profile) {
+    if (whatsappError || !whatsappNumber) {
       return new Response(
         JSON.stringify({ error: 'User not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    const userId = whatsappNumber.user_id
+
     // Verify transaction belongs to user and get details
     const { data: transaction, error: fetchError } = await supabase
       .from('transactions')
       .select('id, amount, type, description')
       .eq('id', transaction_id)
-      .eq('user_id', profile.user_id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError || !transaction) {
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
       .from('transactions')
       .delete()
       .eq('id', transaction_id)
-      .eq('user_id', profile.user_id)
+      .eq('user_id', userId)
 
     if (deleteError) {
       console.error('Error deleting transaction:', deleteError)
