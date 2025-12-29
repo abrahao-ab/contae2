@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CreditCardWidget } from '@/components/dashboard/CreditCardWidget';
+import { CreditCardAlerts } from '@/components/dashboard/CreditCardAlerts';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
@@ -263,6 +264,9 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Visão geral das suas finanças</p>
           </div>
         </div>
+
+        {/* Credit Card Alerts */}
+        <CreditCardAlerts cards={creditCards} threshold={80} />
 
         {/* Date Range Filter */}
         <DateRangeFilter
