@@ -249,6 +249,7 @@ export type Database = {
           is_installment: boolean | null
           is_recurring: boolean | null
           parent_transaction_id: string | null
+          purchase_date: string | null
           source: Database["public"]["Enums"]["transaction_source"]
           total_installments: number | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -268,6 +269,7 @@ export type Database = {
           is_installment?: boolean | null
           is_recurring?: boolean | null
           parent_transaction_id?: string | null
+          purchase_date?: string | null
           source?: Database["public"]["Enums"]["transaction_source"]
           total_installments?: number | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -287,6 +289,7 @@ export type Database = {
           is_installment?: boolean | null
           is_recurring?: boolean | null
           parent_transaction_id?: string | null
+          purchase_date?: string | null
           source?: Database["public"]["Enums"]["transaction_source"]
           total_installments?: number | null
           type?: Database["public"]["Enums"]["transaction_type"]
