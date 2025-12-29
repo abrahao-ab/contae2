@@ -156,23 +156,83 @@ export default function Transactions() {
   const handleCreateTransaction = async (data: any) => {
     if (!user) return;
 
-    const transactionData = {
-      user_id: user.id,
-      type: data.type,
-      amount: parseFloat(data.amount),
-      description: data.description,
-      date: format(data.date, 'yyyy-MM-dd'),
-      category_id: data.categoryId || null,
-      credit_card_id: data.creditCardId || null,
-      bank_account_id: data.bankAccountId || null,
-      is_installment: data.isInstallment,
-      total_installments: data.isInstallment ? data.totalInstallments : null,
-      current_installment: data.isInstallment ? 1 : null,
-    };
+    const totalAmount = parseFloat(data.amount);
+    const isInstallment = data.isInstallment && data.totalInstallments > 1;
+    const totalInstallments = isInstallment ? data.totalInstallments : null;
+    const installmentAmount = isInstallment ? totalAmount / totalInstallments : totalAmount;
 
-    const { error } = await supabase.from('transactions').insert(transactionData);
+    try {
+      // If installment, create multiple transactions (one per month)
+      if (isInstallment && totalInstallments) {
+        const transactionsToInsert = [];
+        const baseDate = new Date(data.date);
 
-    if (error) {
+        for (let i = 0; i < totalInstallments; i++) {
+          const installmentDate = new Date(baseDate);
+          installmentDate.setMonth(installmentDate.getMonth() + i);
+
+          transactionsToInsert.push({
+            user_id: user.id,
+            type: data.type,
+            amount: installmentAmount,
+            description: `${data.description} (${i + 1}/${totalInstallments})`,
+            date: format(installmentDate, 'yyyy-MM-dd'),
+            category_id: data.categoryId || null,
+            credit_card_id: data.creditCardId || null,
+            bank_account_id: data.bankAccountId || null,
+            is_installment: true,
+            total_installments: totalInstallments,
+            current_installment: i + 1,
+          });
+        }
+
+        const { error } = await supabase.from('transactions').insert(transactionsToInsert);
+        if (error) throw error;
+      } else {
+        // Single transaction
+        const transactionData = {
+          user_id: user.id,
+          type: data.type,
+          amount: totalAmount,
+          description: data.description,
+          date: format(data.date, 'yyyy-MM-dd'),
+          category_id: data.categoryId || null,
+          credit_card_id: data.creditCardId || null,
+          bank_account_id: data.bankAccountId || null,
+          is_installment: false,
+          total_installments: null,
+          current_installment: null,
+        };
+
+        const { error } = await supabase.from('transactions').insert(transactionData);
+        if (error) throw error;
+      }
+
+      // Update credit card balance if credit card was used
+      if (data.creditCardId && data.type === 'expense') {
+        const { data: cardData } = await supabase
+          .from('credit_cards')
+          .select('current_balance')
+          .eq('id', data.creditCardId)
+          .single();
+
+        if (cardData) {
+          await supabase
+            .from('credit_cards')
+            .update({ current_balance: cardData.current_balance + totalAmount })
+            .eq('id', data.creditCardId);
+        }
+      }
+
+      toast({
+        title: 'Transação criada',
+        description: isInstallment 
+          ? `${totalInstallments} parcelas de ${formatCurrency(installmentAmount)} criadas.`
+          : 'A transação foi registrada com sucesso.',
+      });
+
+      fetchData();
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro ao criar transação',
@@ -180,33 +240,76 @@ export default function Transactions() {
       });
       throw error;
     }
-
-    toast({
-      title: 'Transação criada',
-      description: 'A transação foi registrada com sucesso.',
-    });
-
-    fetchData();
   };
 
   const handleUpdateTransaction = async (data: any) => {
     if (!user || !editingTransaction) return;
 
-    const { error } = await supabase
-      .from('transactions')
-      .update({
-        type: data.type,
-        amount: parseFloat(data.amount),
-        description: data.description,
-        date: format(data.date, 'yyyy-MM-dd'),
-        category_id: data.categoryId || null,
-        credit_card_id: data.creditCardId || null,
-        bank_account_id: data.bankAccountId || null,
-      })
-      .eq('id', editingTransaction.id)
-      .eq('user_id', user.id);
+    const newAmount = parseFloat(data.amount);
+    const oldAmount = editingTransaction.amount;
+    const oldCardId = editingTransaction.credit_card_id;
+    const newCardId = data.creditCardId || null;
 
-    if (error) {
+    try {
+      // Handle credit card balance changes
+      if (editingTransaction.type === 'expense') {
+        // If old transaction had a card, restore its balance
+        if (oldCardId) {
+          const { data: oldCardData } = await supabase
+            .from('credit_cards')
+            .select('current_balance')
+            .eq('id', oldCardId)
+            .single();
+
+          if (oldCardData) {
+            await supabase
+              .from('credit_cards')
+              .update({ current_balance: Math.max(0, oldCardData.current_balance - oldAmount) })
+              .eq('id', oldCardId);
+          }
+        }
+      }
+
+      // If new transaction has a card and is expense, add to its balance
+      if (newCardId && data.type === 'expense') {
+        const { data: newCardData } = await supabase
+          .from('credit_cards')
+          .select('current_balance')
+          .eq('id', newCardId)
+          .single();
+
+        if (newCardData) {
+          await supabase
+            .from('credit_cards')
+            .update({ current_balance: newCardData.current_balance + newAmount })
+            .eq('id', newCardId);
+        }
+      }
+
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          type: data.type,
+          amount: newAmount,
+          description: data.description,
+          date: format(data.date, 'yyyy-MM-dd'),
+          category_id: data.categoryId || null,
+          credit_card_id: newCardId,
+          bank_account_id: data.bankAccountId || null,
+        })
+        .eq('id', editingTransaction.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Transação atualizada',
+        description: 'As alterações foram salvas.',
+      });
+
+      setEditingTransaction(null);
+      fetchData();
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro ao atualizar transação',
@@ -214,26 +317,44 @@ export default function Transactions() {
       });
       throw error;
     }
-
-    toast({
-      title: 'Transação atualizada',
-      description: 'As alterações foram salvas.',
-    });
-
-    setEditingTransaction(null);
-    fetchData();
   };
 
   const handleDeleteTransaction = async () => {
     if (!user || !deletingTransaction) return;
 
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', deletingTransaction.id)
-      .eq('user_id', user.id);
+    try {
+      // If credit card was used, restore the balance
+      if (deletingTransaction.credit_card_id && deletingTransaction.type === 'expense') {
+        const { data: cardData } = await supabase
+          .from('credit_cards')
+          .select('current_balance')
+          .eq('id', deletingTransaction.credit_card_id)
+          .single();
 
-    if (error) {
+        if (cardData) {
+          await supabase
+            .from('credit_cards')
+            .update({ current_balance: Math.max(0, cardData.current_balance - deletingTransaction.amount) })
+            .eq('id', deletingTransaction.credit_card_id);
+        }
+      }
+
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', deletingTransaction.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Transação excluída',
+        description: 'A transação foi removida.',
+      });
+
+      setDeletingTransaction(null);
+      fetchData();
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro ao excluir transação',
@@ -241,14 +362,6 @@ export default function Transactions() {
       });
       throw error;
     }
-
-    toast({
-      title: 'Transação excluída',
-      description: 'A transação foi removida.',
-    });
-
-    setDeletingTransaction(null);
-    fetchData();
   };
 
   const openEditForm = (transaction: Transaction) => {
