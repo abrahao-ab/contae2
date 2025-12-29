@@ -19,10 +19,13 @@ import {
   Crown,
   Users,
   Zap,
+  Heart,
 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
 type AccountType = Database['public']['Enums']['account_type'];
+
+import { useCouple } from '@/hooks/useCouple';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -45,6 +48,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isCouplePlan, hasCouple } = useCouple();
 
   useEffect(() => {
     const fetchAccountType = async () => {
@@ -152,6 +156,23 @@ export function Sidebar() {
 
         {/* User Section */}
         <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
+          {isCouplePlan && hasCouple && (
+            <NavLink
+              to="/settings/couple"
+              onClick={closeMobileMenu}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200',
+                  'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent',
+                  'active:scale-95',
+                  isActive && 'bg-pink-500/20 text-pink-500'
+                )
+              }
+            >
+              <Heart className="w-5 h-5 flex-shrink-0" />
+              {(!collapsed || isMobile) && <span className="font-medium text-sm">Casal</span>}
+            </NavLink>
+          )}
           <NavLink
             to="/settings"
             onClick={closeMobileMenu}
