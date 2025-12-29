@@ -100,7 +100,7 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
   }
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" id="income-expense-chart">
       <CardHeader>
         <CardTitle className="text-foreground text-lg">Receitas vs Despesas</CardTitle>
       </CardHeader>

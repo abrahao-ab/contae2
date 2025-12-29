@@ -12,6 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface Transaction {
   id: string;
@@ -48,6 +49,24 @@ const formatCurrency = (value: number) => {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
+};
+
+const captureChart = async (elementId: string): Promise<string | null> => {
+  const element = document.getElementById(elementId);
+  if (!element) return null;
+
+  try {
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error(`Error capturing chart ${elementId}:`, error);
+    return null;
+  }
 };
 
 export function ExportReport({ transactions, categories, dateRange, stats }: ExportReportProps) {
@@ -147,6 +166,48 @@ export function ExportReport({ transactions, categories, dateRange, stats }: Exp
       const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Por Categoria');
 
+      // Capture charts as images
+      const incomeExpenseChartImg = await captureChart('income-expense-chart');
+      const categoryChartImg = await captureChart('category-chart-expense');
+
+      // Charts sheet with images (Excel limitation: images are added as comments/notes)
+      // For a better experience, we'll add a note explaining charts are in PDF
+      const chartsData = [
+        ['GRÁFICOS'],
+        [''],
+        ['Os gráficos visuais estão disponíveis na versão PDF do relatório.'],
+        [''],
+        ['DADOS DO GRÁFICO - RECEITAS vs DESPESAS'],
+        [''],
+      ];
+
+      // Group transactions by date for chart data
+      const dateGrouped = transactions.reduce((acc, t) => {
+        if (!acc[t.date]) {
+          acc[t.date] = { income: 0, expense: 0 };
+        }
+        if (t.type === 'income') {
+          acc[t.date].income += t.amount;
+        } else {
+          acc[t.date].expense += t.amount;
+        }
+        return acc;
+      }, {} as Record<string, { income: number; expense: number }>);
+
+      chartsData.push(['Data', 'Receitas', 'Despesas']);
+      Object.entries(dateGrouped)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([date, values]) => {
+          chartsData.push([
+            format(new Date(date), 'dd/MM/yyyy'),
+            formatCurrency(values.income),
+            formatCurrency(values.expense),
+          ]);
+        });
+
+      const chartsSheet = XLSX.utils.aoa_to_sheet(chartsData);
+      XLSX.utils.book_append_sheet(workbook, chartsSheet, 'Gráficos');
+
       // Generate and download
       const fileName = `relatorio-financeiro-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
@@ -190,6 +251,10 @@ export function ExportReport({ transactions, categories, dateRange, stats }: Exp
         yPosition += 5;
       };
 
+      // Capture charts
+      const incomeExpenseChartImg = await captureChart('income-expense-chart');
+      const categoryChartImg = await captureChart('category-chart-expense');
+
       // Title
       addText('RELATÓRIO FINANCEIRO', 18, true, [59, 130, 246]);
       yPosition += 5;
@@ -220,11 +285,35 @@ export function ExportReport({ transactions, categories, dateRange, stats }: Exp
       pdf.setTextColor(59, 130, 246);
       pdf.setFont('helvetica', 'bold');
       pdf.text(`Saldo: ${formatCurrency(stats.balance)}`, margin + 5, yPosition);
-      yPosition += 20;
+      yPosition += 25;
+
+      // Charts section
+      if (incomeExpenseChartImg || categoryChartImg) {
+        addText('GRÁFICOS', 14, true, [59, 130, 246]);
+        yPosition += 10;
+
+        const chartWidth = (pageWidth - 2 * margin - 10) / 2;
+        const chartHeight = 60;
+
+        if (incomeExpenseChartImg) {
+          pdf.addImage(incomeExpenseChartImg, 'PNG', margin, yPosition, chartWidth, chartHeight);
+        }
+
+        if (categoryChartImg) {
+          pdf.addImage(categoryChartImg, 'PNG', margin + chartWidth + 10, yPosition, chartWidth, chartHeight);
+        }
+
+        yPosition += chartHeight + 15;
+      }
 
       // Income section
       const incomeTransactions = transactions.filter((t) => t.type === 'income');
       if (incomeTransactions.length > 0) {
+        if (yPosition > 200) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+
         addText('RECEITAS', 14, true, [34, 197, 94]);
         yPosition += 5;
         
