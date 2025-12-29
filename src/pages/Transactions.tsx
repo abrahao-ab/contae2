@@ -5,6 +5,7 @@ import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionCard } from '@/components/transactions/TransactionCard';
 import { TransactionFilters } from '@/components/transactions/TransactionFilters';
 import { DeleteTransactionDialog } from '@/components/transactions/DeleteTransactionDialog';
+import { InstallmentsDialog } from '@/components/transactions/InstallmentsDialog';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -88,6 +89,9 @@ export default function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [installmentsDialogOpen, setInstallmentsDialogOpen] = useState(false);
+  const [selectedInstallments, setSelectedInstallments] = useState<Transaction[]>([]);
+  const [loadingInstallments, setLoadingInstallments] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -222,7 +226,7 @@ export default function Transactions() {
     }
   };
 
-  const handleDeleteTransaction = async () => {
+  const handleDeleteTransaction = async (deleteAll: boolean = true) => {
     if (!user || !deletingTransaction) return;
 
     try {
@@ -234,7 +238,7 @@ export default function Transactions() {
         is_installment: deletingTransaction.is_installment,
         total_installments: deletingTransaction.total_installments,
         parent_transaction_id: deletingTransaction.parent_transaction_id,
-      });
+      }, deleteAll);
 
       setDeletingTransaction(null);
       fetchData();
@@ -256,6 +260,36 @@ export default function Transactions() {
   const openDeleteDialog = (transaction: Transaction) => {
     setDeletingTransaction(transaction);
     setDeleteDialogOpen(true);
+  };
+
+  const openInstallmentsDialog = async (transaction: Transaction) => {
+    if (!user || !transaction.parent_transaction_id) return;
+
+    setLoadingInstallments(true);
+    setInstallmentsDialogOpen(true);
+
+    try {
+      const parentId = transaction.parent_transaction_id;
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, description, amount, date, current_installment, total_installments')
+        .or(`parent_transaction_id.eq.${parentId},id.eq.${parentId}`)
+        .eq('user_id', user.id)
+        .order('current_installment', { ascending: true });
+
+      if (error) throw error;
+      setSelectedInstallments(data as Transaction[] || []);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao carregar parcelas',
+        description: error.message,
+      });
+      setInstallmentsDialogOpen(false);
+    } finally {
+      setLoadingInstallments(false);
+    }
   };
 
   const closeForm = () => {
@@ -438,6 +472,7 @@ export default function Transactions() {
                         transaction={transaction}
                         onEdit={openEditForm}
                         onDelete={openDeleteDialog}
+                        onViewInstallments={openInstallmentsDialog}
                       />
                     ))}
                   </div>
@@ -468,6 +503,17 @@ export default function Transactions() {
         }}
         onConfirm={handleDeleteTransaction}
         transaction={deletingTransaction}
+      />
+
+      {/* Installments Dialog */}
+      <InstallmentsDialog
+        open={installmentsDialogOpen}
+        onClose={() => {
+          setInstallmentsDialogOpen(false);
+          setSelectedInstallments([]);
+        }}
+        installments={selectedInstallments}
+        loading={loadingInstallments}
       />
     </DashboardLayout>
   );

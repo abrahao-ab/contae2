@@ -42,8 +42,8 @@ const formatCurrency = (value: number) => {
 export function useTransactions() {
   /**
    * Calcula a data de vencimento da fatura para uma compra no cartão
-   * - Se a compra foi antes do fechamento: vai para a fatura atual (vence no mês seguinte)
-   * - Se a compra foi após o fechamento: vai para a próxima fatura (vence dois meses depois)
+   * - Se a compra foi antes ou no dia do fechamento: vai para a fatura atual (vence no mesmo mês ou próximo)
+   * - Se a compra foi após o fechamento: vai para a próxima fatura (vence no mês seguinte)
    */
   const getInvoiceDueDate = (
     transactionDate: Date, 
@@ -60,14 +60,31 @@ export function useTransactions() {
     let dueMonth: number;
     let dueYear: number;
     
+    // Se o dia de vencimento é maior que o dia de fechamento, 
+    // a fatura vence no mesmo mês que fecha
+    // Caso contrário, vence no mês seguinte ao fechamento
+    const dueSameMonthAsClosing = dueDayValue > closingDayValue;
+    
     if (purchaseDay <= closingDayValue) {
-      // Compra antes do fechamento: fatura vence no mês seguinte
-      dueMonth = purchaseMonth + 1;
-      dueYear = purchaseYear;
+      // Compra antes ou no dia do fechamento: entra na fatura atual
+      if (dueSameMonthAsClosing) {
+        // Vencimento no mesmo mês do fechamento
+        dueMonth = purchaseMonth;
+        dueYear = purchaseYear;
+      } else {
+        // Vencimento no mês seguinte ao fechamento
+        dueMonth = purchaseMonth + 1;
+        dueYear = purchaseYear;
+      }
     } else {
-      // Compra após o fechamento: fatura vence dois meses depois
-      dueMonth = purchaseMonth + 2;
-      dueYear = purchaseYear;
+      // Compra após o fechamento: vai para a próxima fatura
+      if (dueSameMonthAsClosing) {
+        dueMonth = purchaseMonth + 1;
+        dueYear = purchaseYear;
+      } else {
+        dueMonth = purchaseMonth + 2;
+        dueYear = purchaseYear;
+      }
     }
     
     // Ajustar ano se o mês passou de dezembro
