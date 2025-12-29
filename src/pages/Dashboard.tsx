@@ -14,6 +14,7 @@ import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { ViewModeToggle } from '@/components/couple/ViewModeToggle';
 import { CoupleGoalsCard } from '@/components/couple/CoupleGoalsCard';
 import { CoupleBudgetAlerts } from '@/components/couple/CoupleBudgetAlerts';
+import { CoupleSpendingChart } from '@/components/couple/CoupleSpendingChart';
 import { useAuth } from '@/hooks/useAuth';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useCouple } from '@/hooks/useCouple';
@@ -391,6 +392,18 @@ export default function Dashboard() {
               type="expense"
             />
           </div>
+
+          {/* Couple Spending Chart - Only in couple view */}
+          {showCoupleView && (
+            <CoupleSpendingChart 
+              transactions={allTransactions.map(t => ({
+                id: t.id,
+                type: t.type,
+                amount: Number(t.amount),
+                owner_type: t.owner_type,
+              }))} 
+            />
+          )}
 
           {/* Couple Goals Card - Only in couple view */}
           {showCoupleView && (
