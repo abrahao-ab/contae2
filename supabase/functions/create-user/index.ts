@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 function normalizePhone(phone: string): string {
@@ -17,63 +17,17 @@ function normalizePhone(phone: string): string {
   return normalized
 }
 
-async function verifyWebhookSignature(req: Request, body: string): Promise<boolean> {
-  const signature = req.headers.get('x-webhook-signature')
-  const secret = Deno.env.get('WEBHOOK_SECRET')
-  
-  if (!secret) {
-    console.error('WEBHOOK_SECRET not configured')
-    return false
-  }
-  
-  if (!signature) {
-    console.error('Missing x-webhook-signature header')
-    return false
-  }
-  
-  try {
-    const encoder = new TextEncoder()
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
-    
-    const signatureBytes = await crypto.subtle.sign('HMAC', key, encoder.encode(body))
-    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
-    
-    return signature === expectedSignature
-  } catch (error) {
-    console.error('Error verifying signature:', error)
-    return false
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const bodyText = await req.text()
-    
-    // Verificar assinatura HMAC
-    const isValid = await verifyWebhookSignature(req, bodyText)
-    if (!isValid) {
-      console.error('Invalid webhook signature')
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Invalid signature' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { phone, name } = JSON.parse(bodyText)
+    const { phone, name } = await req.json()
 
     if (!phone || !name) {
       return new Response(
