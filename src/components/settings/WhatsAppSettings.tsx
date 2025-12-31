@@ -166,11 +166,20 @@ export function WhatsAppSettings() {
   const canAddMore = whatsappNumbers.length < maxNumbers;
 
   const formatPhone = (phone: string) => {
-    if (phone.length === 11) {
-      return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+    // Remove o + para processar
+    const digits = phone.replace(/^\+/, '');
+    
+    // Formato brasileiro: +55 (11) 99999-9999
+    if (digits.length === 13) {
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
     }
-    if (phone.length === 13) {
-      return `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4, 9)}-${phone.slice(9)}`;
+    // Formato brasileiro sem código de país: (11) 99999-9999
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    // Formato com código de país 12 dígitos: +55 (11) 9999-9999
+    if (digits.length === 12) {
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
     }
     return phone;
   };
