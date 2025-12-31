@@ -38,15 +38,10 @@ export function WhatsAppSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
-  const formatPhoneInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 2) return digits.length ? `(${digits}` : '';
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  };
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewPhone(formatPhoneInput(e.target.value));
+    // Only allow digits
+    const digits = e.target.value.replace(/\D/g, '');
+    setNewPhone(digits);
   };
 
   useEffect(() => {
@@ -89,11 +84,13 @@ export function WhatsAppSettings() {
       return;
     }
 
-    const cleanPhone = newPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-      toast.error('Número de telefone inválido');
+    if (newPhone.length < 10 || newPhone.length > 13) {
+      toast.error('Número de telefone inválido. Digite entre 10 e 13 números.');
       return;
     }
+
+    // Add + prefix when saving
+    const phoneToSave = newPhone.startsWith('+') ? newPhone : `+${newPhone}`;
 
     setIsAdding(true);
     try {
@@ -101,7 +98,7 @@ export function WhatsAppSettings() {
         .from('whatsapp_numbers')
         .insert({
           user_id: user?.id,
-          phone: cleanPhone,
+          phone: phoneToSave,
           is_primary: whatsappNumbers.length === 0
         });
 
@@ -245,18 +242,23 @@ export function WhatsAppSettings() {
 
         {/* Add new number */}
         {canAddMore && (
-          <div className="flex gap-2">
-            <Input
-              placeholder="(00) 00000-0000"
-              value={newPhone}
-              onChange={handlePhoneChange}
-              maxLength={15}
-              className="flex-1"
-            />
-            <Button onClick={handleAddPhone} disabled={isAdding}>
-              <Plus className="w-4 h-4 mr-1" />
-              Adicionar
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                placeholder="5511999999999"
+                value={newPhone}
+                onChange={handlePhoneChange}
+                maxLength={13}
+                className="flex-1 font-mono"
+              />
+              <Button onClick={handleAddPhone} disabled={isAdding}>
+                <Plus className="w-4 h-4 mr-1" />
+                Adicionar
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Digite apenas números, sem espaços ou caracteres especiais (ex: 5511999999999)
+            </p>
           </div>
         )}
 

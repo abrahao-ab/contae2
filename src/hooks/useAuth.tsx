@@ -40,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName?: string, phone?: string) => {
     const redirectUrl = `${window.location.origin}/`;
+    // Add + prefix to phone if not present
+    const formattedPhone = phone ? (phone.startsWith('+') ? phone : `+${phone}`) : undefined;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -47,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
-          phone: phone,
+          phone: formattedPhone,
         },
       },
     });
