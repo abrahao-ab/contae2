@@ -16,15 +16,10 @@ export function AuthForm() {
   const [phone, setPhone] = useState('');
   const { signIn, signUp } = useAuth();
 
-  const formatPhoneInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 2) return digits.length ? `(${digits}` : '';
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  };
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhoneInput(e.target.value));
+    // Only allow digits
+    const digits = e.target.value.replace(/\D/g, '');
+    setPhone(digits);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,16 +102,16 @@ export function AuthForm() {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="(00) 00000-0000"
+                        placeholder="5511999999999"
                         value={phone}
                         onChange={handlePhoneChange}
-                        maxLength={15}
-                        className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground"
+                        maxLength={13}
+                        className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground font-mono"
                         required={!isLogin}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Número com DDD (ex: (11) 99999-9999)
+                      Digite apenas números, sem espaços ou caracteres especiais (ex: 5511999999999)
                     </p>
                   </div>
                 </>
