@@ -7,6 +7,7 @@ import { CreditCardForm } from '@/components/cards/CreditCardForm';
 import { CreditCardCard } from '@/components/cards/CreditCardCard';
 import { DeleteCardDialog } from '@/components/cards/DeleteCardDialog';
 import { CardDetailView } from '@/components/cards/CardDetailView';
+import { PayInvoiceDialog } from '@/components/cards/PayInvoiceDialog';
 import { UpgradeBanner } from '@/components/upgrade/UpgradeBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,6 +67,10 @@ export default function Cards() {
   const [editingCard, setEditingCard] = useState<CreditCardData | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingCard, setDeletingCard] = useState<CreditCardData | null>(null);
+  
+  // Pay invoice dialog
+  const [payInvoiceDialogOpen, setPayInvoiceDialogOpen] = useState(false);
+  const [payingCard, setPayingCard] = useState<CreditCardData | null>(null);
   
   // Detail view
   const [selectedCard, setSelectedCard] = useState<CreditCardData | null>(null);
@@ -264,6 +269,11 @@ export default function Cards() {
     setDeleteDialogOpen(true);
   };
 
+  const openPayInvoice = (card: CreditCardData) => {
+    setPayingCard(card);
+    setPayInvoiceDialogOpen(true);
+  };
+
   const openCardDetail = (card: CreditCardData) => {
     setSelectedCard(card);
     fetchCardTransactions(card.id);
@@ -456,6 +466,7 @@ export default function Cards() {
                 onEdit={openEditForm}
                 onDelete={openDeleteDialog}
                 onClick={openCardDetail}
+                onPayInvoice={openPayInvoice}
               />
             ))}
           </div>
@@ -479,6 +490,17 @@ export default function Cards() {
         }}
         onConfirm={handleDeleteCard}
         card={deletingCard}
+      />
+
+      {/* Pay Invoice Dialog */}
+      <PayInvoiceDialog
+        open={payInvoiceDialogOpen}
+        onClose={() => {
+          setPayInvoiceDialogOpen(false);
+          setPayingCard(null);
+        }}
+        card={payingCard}
+        onSuccess={fetchCards}
       />
 
       <UpgradeDialogComponent />

@@ -44,6 +44,64 @@ export type Database = {
         }
         Relationships: []
       }
+      card_payments: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          created_at: string
+          credit_card_id: string
+          id: string
+          is_full_payment: boolean
+          payment_date: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          created_at?: string
+          credit_card_id: string
+          id?: string
+          is_full_payment?: boolean
+          payment_date?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          created_at?: string
+          credit_card_id?: string
+          id?: string
+          is_full_payment?: boolean
+          payment_date?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_payments_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string | null
