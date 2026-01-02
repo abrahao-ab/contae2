@@ -6,7 +6,15 @@ const corsHeaders = {
 }
 
 function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, '')
+  let normalized = phone.replace(/[^\d+]/g, '')
+  if (!normalized.startsWith('+')) {
+    if (normalized.startsWith('55')) {
+      normalized = '+' + normalized
+    } else {
+      normalized = '+55' + normalized
+    }
+  }
+  return normalized
 }
 
 Deno.serve(async (req) => {
