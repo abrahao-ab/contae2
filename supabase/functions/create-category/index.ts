@@ -57,6 +57,35 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Verificar tipo de conta do usuário
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', whatsappData.user_id)
+      .maybeSingle()
+
+    if (profileError || !profileData) {
+      return new Response(
+        JSON.stringify({ error: 'Profile not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Apenas contas paid ou couple podem criar categorias
+    if (profileData.account_type === 'free') {
+      console.log(`User ${whatsappData.user_id} has free account, cannot create categories`)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Upgrade required',
+          message: 'Apenas contas Premium ou Casal podem criar categorias personalizadas. Faça upgrade do seu plano para desbloquear esta funcionalidade.',
+          account_type: profileData.account_type
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log(`User account type: ${profileData.account_type}, proceeding with category creation`)
+
     const { data: existingCategory } = await supabase
       .from('categories')
       .select('id, name')
