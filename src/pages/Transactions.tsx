@@ -323,7 +323,7 @@ export default function Transactions() {
       }
       // Date range filter
       if (dateRange?.from) {
-        const transDate = new Date(t.date);
+        const transDate = new Date(t.date + 'T00:00:00');
         if (transDate < dateRange.from) return false;
         if (dateRange.to && transDate > dateRange.to) return false;
       }
@@ -346,7 +346,7 @@ export default function Transactions() {
   const groupedTransactions = useMemo(() => {
     const groups: Record<string, Transaction[]> = {};
     filteredTransactions.forEach((t) => {
-      const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
+      const dateKey = format(new Date(t.date + 'T00:00:00'), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -458,7 +458,7 @@ export default function Transactions() {
                 <div key={dateKey} className="space-y-2 sm:space-y-3">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <h3 className="text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">
-                      {format(new Date(dateKey), "EEE, dd MMM", { locale: ptBR })}
+                      {format(new Date(dateKey + 'T00:00:00'), "EEE, dd MMM", { locale: ptBR })}
                     </h3>
                     <div className="flex-1 h-px bg-border" />
                     <span className="text-xs sm:text-sm text-muted-foreground">
