@@ -136,7 +136,7 @@ export function TransactionCard({ transaction, onEdit, onDelete, onViewInstallme
             )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
-            <span>{format(new Date(transaction.date), "dd MMM", { locale: ptBR })}</span>
+            <span>{format(new Date(transaction.date + 'T00:00:00'), "dd MMM", { locale: ptBR })}</span>
             {transaction.category && (
               <>
                 <span className="hidden sm:inline">•</span>
