@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Pencil, Trash2, CreditCard, Calendar, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, CreditCard, Calendar, AlertTriangle, Banknote } from 'lucide-react';
 
 interface CreditCardData {
   id: string;
@@ -21,6 +21,7 @@ interface CreditCardCardProps {
   onEdit: (card: CreditCardData) => void;
   onDelete: (card: CreditCardData) => void;
   onClick?: (card: CreditCardData) => void;
+  onPayInvoice?: (card: CreditCardData) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -30,12 +31,13 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export function CreditCardCard({ card, onEdit, onDelete, onClick }: CreditCardCardProps) {
+export function CreditCardCard({ card, onEdit, onDelete, onClick, onPayInvoice }: CreditCardCardProps) {
   const usedPercentage = card.credit_limit > 0 
     ? (card.current_balance / card.credit_limit) * 100 
     : 0;
   const availableLimit = card.credit_limit - card.current_balance;
   const isHighUsage = usedPercentage >= 80;
+  const hasBalance = card.current_balance > 0;
 
   return (
     <div
@@ -59,6 +61,20 @@ export function CreditCardCard({ card, onEdit, onDelete, onClick }: CreditCardCa
         'absolute top-3 right-3 flex items-center gap-1 transition-opacity z-10',
         'opacity-0 group-hover:opacity-100'
       )}>
+        {hasBalance && onPayInvoice && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 bg-green-500/80 hover:bg-green-600/80 text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPayInvoice(card);
+            }}
+            title="Pagar fatura"
+          >
+            <Banknote className="w-3.5 h-3.5" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
