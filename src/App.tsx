@@ -7,8 +7,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { CoupleProvider } from "@/hooks/useCouple";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import Index from "./pages/Index";
 import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import Cadastro from "./pages/Cadastro";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Cards from "./pages/Cards";
@@ -32,7 +33,8 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/cadastro" element={<Cadastro />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
                 <Route path="/cards" element={<ProtectedRoute><Cards /></ProtectedRoute>} />

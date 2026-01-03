@@ -233,7 +233,7 @@ const Landing = () => {
             <Link to="/login">
               <Button variant="ghost" size="sm">Entrar</Button>
             </Link>
-            <Link to="/login">
+            <Link to="/cadastro">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="sm" className="bg-primary hover:bg-primary/90">
                   Começar grátis
@@ -305,7 +305,7 @@ const Landing = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            <Link to="/login">
+            <Link to="/cadastro">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 h-14 gap-2">
                   Começar grátis
@@ -662,7 +662,7 @@ const Landing = () => {
                       ))}
                     </ul>
                     
-                    <Link to="/login" className="block">
+                    <Link to="/cadastro" className="block">
                       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                         <Button 
                           variant={plan.ctaVariant} 
@@ -746,7 +746,7 @@ const Landing = () => {
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
             Junte-se a milhares de pessoas que já transformaram sua relação com dinheiro.
           </p>
-          <Link to="/login">
+          <Link to="/cadastro">
             <motion.div 
               whileHover={{ scale: 1.05 }} 
               whileTap={{ scale: 0.95 }}
