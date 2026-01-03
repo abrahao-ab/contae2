@@ -42,7 +42,15 @@ import { useCouple } from '@/hooks/useCouple';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
-  amount: z.string().min(1, 'Valor é obrigatório'),
+  amount: z.string()
+    .min(1, 'Valor é obrigatório')
+    .refine(
+      (val) => {
+        const num = parseFloat(val);
+        return !isNaN(num) && num >= 0.01 && num <= 999999999.99;
+      },
+      'Valor deve estar entre R$ 0,01 e R$ 999.999.999,99'
+    ),
   description: z.string().trim().min(1, 'Descrição é obrigatória').max(200, 'Máximo 200 caracteres'),
   date: z.date({ required_error: 'Data é obrigatória' }),
   categoryId: z.string().optional(),
