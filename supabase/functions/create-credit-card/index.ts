@@ -69,13 +69,59 @@ Deno.serve(async (req) => {
       )
     }
 
+    const userId = whatsappData.user_id
+
+    // Get user's account type
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('account_type')
+      .eq('user_id', userId)
+      .single()
+
+    const accountType = profileData?.account_type || 'free'
+
+    // Get plan limits for credit cards
+    const { data: limitData } = await supabase
+      .from('plan_limits')
+      .select('limit_value, is_unlimited')
+      .eq('plan_id', accountType)
+      .eq('feature_key', 'credit_cards')
+      .single()
+
+    const isUnlimited = limitData?.is_unlimited || false
+    const maxCards = limitData?.limit_value || 1
+
+    // Count current credit cards
+    const { count: currentCount } = await supabase
+      .from('credit_cards')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_active', true)
+
+    const cardCount = currentCount || 0
+
+    // Check if user can create more cards
+    if (!isUnlimited && cardCount >= maxCards) {
+      console.log(`User ${userId} reached credit card limit: ${cardCount}/${maxCards}`)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Limite de cartões atingido',
+          message: `Você atingiu o limite de ${maxCards} cartão(ões) do seu plano. Faça upgrade para adicionar mais cartões.`,
+          current: cardCount,
+          limit: maxCards,
+          plan: accountType
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const bankLower = bank.toLowerCase()
     const cardColor = bankColors[bankLower] || '#6366f1'
 
     const { data: newCard, error: insertError } = await supabase
       .from('credit_cards')
       .insert({
-        user_id: whatsappData.user_id,
+        user_id: userId,
         name: name || bank,
         bank_name: bank,
         credit_limit: limit || 0,
