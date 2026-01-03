@@ -23,10 +23,34 @@ import { Loader2 } from 'lucide-react';
 const creditCardSchema = z.object({
   name: z.string().trim().min(1, 'Nome é obrigatório').max(50, 'Máximo 50 caracteres'),
   bankName: z.string().trim().min(1, 'Banco é obrigatório').max(50, 'Máximo 50 caracteres'),
-  lastFourDigits: z.string().max(4, 'Máximo 4 dígitos').optional(),
-  creditLimit: z.string().min(1, 'Limite é obrigatório'),
-  closingDay: z.string().min(1, 'Dia de fechamento é obrigatório'),
-  dueDay: z.string().min(1, 'Dia de vencimento é obrigatório'),
+  lastFourDigits: z.string().max(4, 'Máximo 4 dígitos').regex(/^\d*$/, 'Apenas números').optional(),
+  creditLimit: z.string()
+    .min(1, 'Limite é obrigatório')
+    .refine(
+      (val) => {
+        const num = parseFloat(val);
+        return !isNaN(num) && num >= 0 && num <= 10000000;
+      },
+      'Limite deve estar entre R$ 0 e R$ 10.000.000,00'
+    ),
+  closingDay: z.string()
+    .min(1, 'Dia de fechamento é obrigatório')
+    .refine(
+      (val) => {
+        const num = parseInt(val);
+        return !isNaN(num) && num >= 1 && num <= 31;
+      },
+      'Dia deve estar entre 1 e 31'
+    ),
+  dueDay: z.string()
+    .min(1, 'Dia de vencimento é obrigatório')
+    .refine(
+      (val) => {
+        const num = parseInt(val);
+        return !isNaN(num) && num >= 1 && num <= 31;
+      },
+      'Dia deve estar entre 1 e 31'
+    ),
   color: z.string(),
 });
 
