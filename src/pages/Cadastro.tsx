@@ -150,7 +150,7 @@ const Cadastro = () => {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Apenas números com código do país (ex: 5511999999999)
+                    Digite exatamente como aparece no seu WhatsApp, sem traços, espaços ou parênteses (ex: 5511999999999)
                   </p>
                 </div>
 
