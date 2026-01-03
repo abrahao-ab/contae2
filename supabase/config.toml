@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.list-bank-accounts]
 verify_jwt = false
+
+[functions.list-credit-cards]
+verify_jwt = false
