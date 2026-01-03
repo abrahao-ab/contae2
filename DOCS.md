@@ -509,23 +509,46 @@ Cria um novo cartão de crédito.
 | BTG         | #1F2937   |
 | Outro       | #6B7280   |
 
+**Limites por Plano:**
+
+| Plano  | Limite de Cartões |
+|--------|-------------------|
+| free   | 1                 |
+| paid   | Ilimitado         |
+| couple | Ilimitado         |
+
 **Resposta de Sucesso (200):**
 ```json
 {
   "success": true,
   "card_id": "uuid",
-  "message": "Cartão de crédito criado com sucesso",
-  "card": {
-    "id": "uuid",
-    "name": "Nubank Platinum",
-    "bank_name": "Nubank",
-    "credit_limit": 5000.00,
-    "color": "#8B5CF6",
-    "closing_day": 15,
-    "due_day": 22
-  }
+  "name": "Nubank Platinum",
+  "bank": "Nubank",
+  "limit": 5000.00,
+  "message": "Credit card created successfully"
 }
 ```
+
+**Erros:**
+- `400` - Phone e bank são obrigatórios
+- `403` - "Limite de cartões atingido" (quando o usuário atinge o limite do plano)
+- `404` - Usuário não encontrado
+
+**Resposta de Erro - Limite Atingido (403):**
+```json
+{
+  "error": "Limite de cartões atingido",
+  "message": "Você atingiu o limite de 1 cartão(ões) do seu plano. Faça upgrade para adicionar mais cartões.",
+  "current": 1,
+  "limit": 1,
+  "plan": "free"
+}
+```
+
+**⚠️ Regras de Negócio:**
+- Usuários `free` podem ter apenas 1 cartão de crédito ativo
+- Usuários `paid` e `couple` têm cartões ilimitados
+- O limite é verificado com base na tabela `plan_limits` (feature_key: `credit_cards`)
 
 ---
 
