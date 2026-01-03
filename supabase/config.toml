@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.create-credit-card]
 verify_jwt = false
+
+[functions.create-bank-account]
+verify_jwt = false
+
+[functions.list-bank-accounts]
+verify_jwt = false
