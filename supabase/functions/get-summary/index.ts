@@ -46,10 +46,34 @@ function getMonthName(month: number): string {
   return months[month - 1] || ''
 }
 
+// Formata data para YYYY-MM-DD no timezone especificado
+function formatDateToString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Parse de data no formato YYYY-MM-DD
+function parseDate(dateStr: string): Date | null {
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  
+  const year = parseInt(match[1])
+  const month = parseInt(match[2]) - 1
+  const day = parseInt(match[3])
+  
+  const date = new Date(year, month, day)
+  if (isNaN(date.getTime())) return null
+  
+  return date
+}
+
 interface DateRange {
   startDate: Date
   endDate: Date
   periodLabel: string
+  periodCode: string
 }
 
 // Calcula o range de datas baseado no período especificado
@@ -61,53 +85,130 @@ function calculateDateRange(period: string, timezone: string = 'America/Sao_Paul
   let startDate: Date
   let endDate: Date = new Date(today)
   let periodLabel: string
+  let periodCode: string = period
 
   // Período padrão
   const periodLower = period.toLowerCase().trim()
 
-  // Padrões para períodos relativos
-  // "mês passado", "mes passado"
-  if (periodLower === 'last_month' || periodLower.includes('mês passado') || periodLower.includes('mes passado')) {
-    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    startDate = lastMonth
-    endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Último dia do mês anterior
-    periodLabel = `de ${getMonthName(lastMonth.getMonth() + 1)} de ${lastMonth.getFullYear()}`
+  // ========== PERÍODO: HOJE ==========
+  if (periodLower === 'day' || periodLower === 'today' || periodLower === 'hoje') {
+    startDate = new Date(today)
+    startDate.setHours(0, 0, 0, 0)
+    endDate = new Date(today)
+    endDate.setHours(23, 59, 59, 999)
+    periodLabel = 'de hoje'
+    periodCode = 'day'
   }
-  // "semana passada"
+  // ========== PERÍODO: ONTEM ==========
+  else if (periodLower === 'yesterday' || periodLower === 'ontem') {
+    startDate = new Date(today)
+    startDate.setDate(today.getDate() - 1)
+    startDate.setHours(0, 0, 0, 0)
+    endDate = new Date(startDate)
+    endDate.setHours(23, 59, 59, 999)
+    periodLabel = 'de ontem'
+    periodCode = 'yesterday'
+  }
+  // ========== PERÍODO: ESTA SEMANA ==========
+  else if (periodLower === 'week' || periodLower === 'this_week' || periodLower.includes('esta semana') || periodLower.includes('essa semana')) {
+    const dayOfWeek = today.getDay()
+    startDate = new Date(today)
+    startDate.setDate(today.getDate() - dayOfWeek)
+    startDate.setHours(0, 0, 0, 0)
+    // Fim da semana = sábado
+    endDate = new Date(startDate)
+    endDate.setDate(startDate.getDate() + 6)
+    endDate.setHours(23, 59, 59, 999)
+    periodLabel = 'desta semana'
+    periodCode = 'week'
+  }
+  // ========== PERÍODO: SEMANA PASSADA ==========
   else if (periodLower === 'last_week' || periodLower.includes('semana passada')) {
     const dayOfWeek = today.getDay()
     const lastSunday = new Date(today)
     lastSunday.setDate(today.getDate() - dayOfWeek - 7)
+    lastSunday.setHours(0, 0, 0, 0)
     const lastSaturday = new Date(lastSunday)
     lastSaturday.setDate(lastSunday.getDate() + 6)
+    lastSaturday.setHours(23, 59, 59, 999)
     startDate = lastSunday
     endDate = lastSaturday
     periodLabel = 'da semana passada'
+    periodCode = 'last_week'
   }
-  // "últimas X semanas" ou "ultimas X semanas"
+  // ========== PERÍODO: MÊS ATUAL ==========
+  else if (periodLower === 'month' || periodLower === 'this_month' || periodLower.includes('mês atual') || periodLower.includes('mes atual') || periodLower.includes('este mês') || periodLower.includes('esse mês') || periodLower.includes('este mes') || periodLower.includes('esse mes')) {
+    startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0) // Último dia do mês
+    periodLabel = 'deste mês'
+    periodCode = 'month'
+  }
+  // ========== PERÍODO: MÊS PASSADO ==========
+  else if (periodLower === 'last_month' || periodLower.includes('mês passado') || periodLower.includes('mes passado')) {
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    startDate = lastMonth
+    endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Último dia do mês anterior
+    periodLabel = `de ${getMonthName(lastMonth.getMonth() + 1)} de ${lastMonth.getFullYear()}`
+    periodCode = 'last_month'
+  }
+  // ========== PERÍODO: TRIMESTRE (ÚLTIMOS 3 MESES) ==========
+  else if (periodLower === 'quarter' || periodLower === 'last_quarter' || periodLower.includes('último trimestre') || periodLower.includes('ultimo trimestre') || periodLower.includes('últimos 3 meses') || periodLower.includes('ultimos 3 meses')) {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1)
+    endDate = new Date(today) // Até hoje
+    periodLabel = 'dos últimos 3 meses'
+    periodCode = 'quarter'
+  }
+  // ========== PERÍODO: SEMESTRE (ÚLTIMOS 6 MESES) ==========
+  else if (periodLower === 'semester' || periodLower === 'last_semester' || periodLower.includes('último semestre') || periodLower.includes('ultimo semestre') || periodLower.includes('últimos 6 meses') || periodLower.includes('ultimos 6 meses')) {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 5, 1)
+    endDate = new Date(today) // Até hoje
+    periodLabel = 'dos últimos 6 meses'
+    periodCode = 'semester'
+  }
+  // ========== PERÍODO: ANO ATUAL ==========
+  else if (periodLower === 'year' || periodLower === 'this_year' || periodLower.includes('ano atual') || periodLower.includes('este ano') || periodLower.includes('esse ano')) {
+    startDate = new Date(today.getFullYear(), 0, 1)
+    endDate = new Date(today.getFullYear(), 11, 31)
+    periodLabel = 'deste ano'
+    periodCode = 'year'
+  }
+  // ========== PERÍODO: ANO PASSADO ==========
+  else if (periodLower === 'last_year' || periodLower.includes('ano passado')) {
+    startDate = new Date(today.getFullYear() - 1, 0, 1)
+    endDate = new Date(today.getFullYear() - 1, 11, 31)
+    periodLabel = `de ${today.getFullYear() - 1}`
+    periodCode = 'last_year'
+  }
+  // ========== PERÍODO: ÚLTIMAS X SEMANAS ==========
   else if (periodLower.match(/^(últimas?|ultimas?)\s*(\d+)\s*semanas?$/) || periodLower.match(/^last_(\d+)_weeks?$/)) {
     const match = periodLower.match(/(\d+)/)
     const weeks = match ? parseInt(match[1]) : 1
     startDate = new Date(today)
     startDate.setDate(today.getDate() - (weeks * 7))
+    startDate.setHours(0, 0, 0, 0)
     periodLabel = `das últimas ${weeks} semanas`
+    periodCode = `last_${weeks}_weeks`
   }
-  // "últimos X meses" ou "ultimos X meses"
+  // ========== PERÍODO: ÚLTIMOS X MESES ==========
   else if (periodLower.match(/^(últimos?|ultimos?)\s*(\d+)\s*m[eê]s(es)?$/) || periodLower.match(/^last_(\d+)_months?$/)) {
     const match = periodLower.match(/(\d+)/)
     const months = match ? parseInt(match[1]) : 1
-    startDate = new Date(today.getFullYear(), today.getMonth() - months, 1)
+    startDate = new Date(today.getFullYear(), today.getMonth() - months + 1, 1)
+    endDate = new Date(today) // Até hoje
     periodLabel = `dos últimos ${months} meses`
+    periodCode = `last_${months}_months`
   }
-  // "últimos X dias" ou "ultimos X dias"
+  // ========== PERÍODO: ÚLTIMOS X DIAS ==========
   else if (periodLower.match(/^(últimos?|ultimos?)\s*(\d+)\s*dias?$/) || periodLower.match(/^last_(\d+)_days?$/)) {
     const match = periodLower.match(/(\d+)/)
     const days = match ? parseInt(match[1]) : 7
     startDate = new Date(today)
-    startDate.setDate(today.getDate() - days)
+    startDate.setDate(today.getDate() - days + 1)
+    startDate.setHours(0, 0, 0, 0)
     periodLabel = `dos últimos ${days} dias`
+    periodCode = `last_${days}_days`
   }
-  // Mês específico: "dezembro de 2025", "dez 2025", "12/2025", "dezembro/2025"
+  // ========== PERÍODO: MÊS ESPECÍFICO (ex: "dezembro de 2025", "12/2025") ==========
   else if (periodLower.match(/^(\w+)\s*(de\s*)?(\d{4})$/) || periodLower.match(/^(\d{1,2})[\/\-](\d{4})$/)) {
     let month: number | null = null
     let year: number
@@ -134,59 +235,24 @@ function calculateDateRange(period: string, timezone: string = 'America/Sao_Paul
       startDate = new Date(year, month - 1, 1)
       endDate = new Date(year, month, 0) // Último dia do mês
       periodLabel = `de ${getMonthName(month)} de ${year}`
+      periodCode = `${year}-${String(month).padStart(2, '0')}`
     } else {
       // Fallback
       startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
       periodLabel = 'deste mês'
+      periodCode = 'month'
     }
   }
-  // "este mês" ou "esse mês"
-  else if (periodLower === 'month' || periodLower === 'this_month' || periodLower.includes('este mês') || periodLower.includes('esse mês') || periodLower.includes('este mes') || periodLower.includes('esse mes')) {
-    startDate = new Date(today.getFullYear(), today.getMonth(), 1)
-    periodLabel = 'deste mês'
-  }
-  // "esta semana" ou "essa semana"
-  else if (periodLower === 'week' || periodLower === 'this_week' || periodLower.includes('esta semana') || periodLower.includes('essa semana')) {
-    const dayOfWeek = today.getDay()
-    startDate = new Date(today)
-    startDate.setDate(today.getDate() - dayOfWeek)
-    periodLabel = 'desta semana'
-  }
-  // "este ano" ou "esse ano"
-  else if (periodLower === 'year' || periodLower === 'this_year' || periodLower.includes('este ano') || periodLower.includes('esse ano')) {
-    startDate = new Date(today.getFullYear(), 0, 1)
-    periodLabel = 'deste ano'
-  }
-  // "ano passado"
-  else if (periodLower === 'last_year' || periodLower.includes('ano passado')) {
-    startDate = new Date(today.getFullYear() - 1, 0, 1)
-    endDate = new Date(today.getFullYear() - 1, 11, 31)
-    periodLabel = `de ${today.getFullYear() - 1}`
-  }
-  // "hoje"
-  else if (periodLower === 'today' || periodLower === 'hoje') {
-    startDate = new Date(today)
-    startDate.setHours(0, 0, 0, 0)
-    endDate = new Date(today)
-    endDate.setHours(23, 59, 59, 999)
-    periodLabel = 'de hoje'
-  }
-  // "ontem"
-  else if (periodLower === 'yesterday' || periodLower === 'ontem') {
-    startDate = new Date(today)
-    startDate.setDate(today.getDate() - 1)
-    startDate.setHours(0, 0, 0, 0)
-    endDate = new Date(startDate)
-    endDate.setHours(23, 59, 59, 999)
-    periodLabel = 'de ontem'
-  }
-  // Default: mês atual
+  // ========== DEFAULT: MÊS ATUAL ==========
   else {
     startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     periodLabel = 'deste mês'
+    periodCode = 'month'
   }
 
-  return { startDate, endDate, periodLabel }
+  return { startDate, endDate, periodLabel, periodCode }
 }
 
 Deno.serve(async (req) => {
@@ -204,6 +270,10 @@ Deno.serve(async (req) => {
     let phone = url.searchParams.get('phone')
     const period = url.searchParams.get('period') || 'month'
     const timezone = url.searchParams.get('timezone') || 'America/Sao_Paulo'
+    
+    // Novos parâmetros para intervalo personalizado
+    const customStartDate = url.searchParams.get('start_date')
+    const customEndDate = url.searchParams.get('end_date')
 
     if (!phone) {
       return new Response(
@@ -238,13 +308,47 @@ Deno.serve(async (req) => {
       .eq('user_id', userId)
       .maybeSingle()
 
-    // Calcula o range de datas
-    const { startDate, endDate, periodLabel } = calculateDateRange(period, timezone)
+    // Variáveis para o range de datas
+    let startDateStr: string
+    let endDateStr: string
+    let periodLabel: string
+    let periodCode: string
 
-    const startDateStr = startDate.toISOString().split('T')[0]
-    const endDateStr = endDate.toISOString().split('T')[0]
+    // Se start_date e end_date foram informados, usa o intervalo personalizado
+    if (customStartDate && customEndDate) {
+      const parsedStart = parseDate(customStartDate)
+      const parsedEnd = parseDate(customEndDate)
+      
+      if (!parsedStart || !parsedEnd) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid date format. Use YYYY-MM-DD.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      if (parsedStart > parsedEnd) {
+        return new Response(
+          JSON.stringify({ error: 'start_date must be before or equal to end_date.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      startDateStr = customStartDate
+      endDateStr = customEndDate
+      periodLabel = `de ${customStartDate} a ${customEndDate}`
+      periodCode = 'custom'
+      
+      console.log('Using custom date range:', { startDateStr, endDateStr })
+    } else {
+      // Calcula o range de datas baseado no período
+      const dateRange = calculateDateRange(period, timezone)
+      startDateStr = formatDateToString(dateRange.startDate)
+      endDateStr = formatDateToString(dateRange.endDate)
+      periodLabel = dateRange.periodLabel
+      periodCode = dateRange.periodCode
+    }
 
-    console.log('Date range:', { startDateStr, endDateStr, periodLabel })
+    console.log('Date range:', { startDateStr, endDateStr, periodLabel, periodCode })
 
     const { data: transactions, error: transactionsError } = await supabase
       .from('transactions')
@@ -303,7 +407,7 @@ Deno.serve(async (req) => {
         success: true,
         message,
         data: {
-          period,
+          period: periodCode,
           periodLabel,
           startDate: startDateStr,
           endDate: endDateStr,
