@@ -109,6 +109,16 @@ function calculateDateRange(period: string, timezone: string = 'America/Sao_Paul
     periodLabel = 'de ontem'
     periodCode = 'yesterday'
   }
+  // ========== PERÍODO: ANTEONTEM ==========
+  else if (periodLower === 'anteontem' || periodLower === 'day_before_yesterday') {
+    startDate = new Date(today)
+    startDate.setDate(today.getDate() - 2)
+    startDate.setHours(0, 0, 0, 0)
+    endDate = new Date(startDate)
+    endDate.setHours(23, 59, 59, 999)
+    periodLabel = 'de anteontem'
+    periodCode = 'day_before_yesterday'
+  }
   // ========== PERÍODO: ESTA SEMANA ==========
   else if (periodLower === 'week' || periodLower === 'this_week' || periodLower.includes('esta semana') || periodLower.includes('essa semana')) {
     const dayOfWeek = today.getDay()
@@ -121,6 +131,20 @@ function calculateDateRange(period: string, timezone: string = 'America/Sao_Paul
     endDate.setHours(23, 59, 59, 999)
     periodLabel = 'desta semana'
     periodCode = 'week'
+  }
+  // ========== PERÍODO: PRÓXIMA SEMANA ==========
+  else if (periodLower === 'next_week' || periodLower.includes('próxima semana') || periodLower.includes('proxima semana')) {
+    const dayOfWeek = today.getDay()
+    const nextSunday = new Date(today)
+    nextSunday.setDate(today.getDate() + (7 - dayOfWeek))
+    nextSunday.setHours(0, 0, 0, 0)
+    const nextSaturday = new Date(nextSunday)
+    nextSaturday.setDate(nextSunday.getDate() + 6)
+    nextSaturday.setHours(23, 59, 59, 999)
+    startDate = nextSunday
+    endDate = nextSaturday
+    periodLabel = 'da próxima semana'
+    periodCode = 'next_week'
   }
   // ========== PERÍODO: SEMANA PASSADA ==========
   else if (periodLower === 'last_week' || periodLower.includes('semana passada')) {
