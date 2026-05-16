@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.list-credit-cards]
 verify_jwt = false
+
+[functions.lovexit-exporter]
+verify_jwt = false
