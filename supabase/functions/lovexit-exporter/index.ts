@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import postgres from "npm:postgres@3.4.5";
 
 const SHARED_SECRET = "68921661addd6c28746b5ffad2125feb160f9042e8842c125fc5c8de1ebeffb3";
 const LOVEXIT_ORIGIN = "*";
@@ -13,6 +14,8 @@ const PROJECT_ID = "f0ddbb09-c51e-444b-9b62-f24b2b94b8ad";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const DB_URL = Deno.env.get("SUPABASE_DB_URL") ?? "";
+const EXPORTER_VERSION = "2026-05-16-db-url-introspection";
+const sql = DB_URL ? postgres(DB_URL, { prepare: false, max: 1 }) : null;
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -39,28 +42,61 @@ function json(body: unknown, init: ResponseInit = {}) {
 }
 
 async function handshake() {
-  const { error } = await admin.from("pg_tables").select("schemaname").limit(1);
+  // Auth admin works with the service role and doesn't depend on PostgREST schema cache.
+  const { error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 });
+  let tables_visible = 0;
+  let table_error: string | null = null;
+  let table_source: string | null = null;
+  try {
+    const listed = await listPublicTables();
+    tables_visible = listed.tables.length;
+    table_source = listed.source;
+  } catch (e) {
+    table_error = String((e as Error).message ?? e);
+  }
   return {
-    ok: !error,
+    ok: !error && table_error === null,
+    exporter_version: EXPORTER_VERSION,
     project_id: PROJECT_ID,
     supabase_url: SUPABASE_URL,
     has_db_url: Boolean(DB_URL),
-    sample_error: error?.message ?? null,
+    tables_visible,
+    table_source,
+    sample_error: error?.message ?? table_error,
     timestamp: new Date().toISOString(),
   };
 }
 
-async function listPublicTables(): Promise<string[]> {
-  const { data } = await admin
-    .from("information_schema.tables")
-    .select("table_name")
-    .eq("table_schema", "public")
-    .eq("table_type", "BASE TABLE");
-  return (data ?? []).map((r: { table_name: string }) => r.table_name);
+async function listPublicTables(): Promise<{ tables: string[]; source: string }> {
+  if (sql) {
+    const rows = await sql.unsafe(
+      "select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' order by table_name",
+    ) as Array<{ table_name: string }>;
+    return { tables: rows.map((r) => r.table_name), source: "postgres:information_schema" };
+  }
+
+  // Fallback for projects without SUPABASE_DB_URL. This only lists tables
+  // exposed through PostgREST, so it can be empty when Data API schema
+  // exposure/cache is broken even though the database has tables.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+    headers: { apikey: SERVICE_ROLE, authorization: `Bearer ${SERVICE_ROLE}` },
+  });
+  if (!res.ok) throw new Error(`OpenAPI fetch failed: ${res.status}`);
+  const spec = (await res.json()) as {
+    definitions?: Record<string, unknown>;
+    paths?: Record<string, unknown>;
+  };
+  const fromDefs = spec.definitions ? Object.keys(spec.definitions) : [];
+  if (fromDefs.length > 0) return { tables: fromDefs, source: "postgrest:openapi-definitions" };
+  // Fallback for OpenAPI 3 style
+  const tables = Object.keys(spec.paths ?? {})
+    .filter((p) => p.startsWith("/") && p !== "/" && !p.includes("{"))
+    .map((p) => p.slice(1));
+  return { tables, source: "postgrest:openapi-paths" };
 }
 
 async function introspect() {
-  const tables = await listPublicTables();
+  const { tables, source } = await listPublicTables();
   const { data: users } = await admin.auth.admin
     .listUsers({ page: 1, perPage: 1 })
     .catch(() => ({ data: { total: 0 } } as unknown as { data: { total: number } }));
@@ -68,6 +104,8 @@ async function introspect() {
   return {
     project_id: PROJECT_ID,
     supabase_url: SUPABASE_URL,
+    exporter_version: EXPORTER_VERSION,
+    table_source: source,
     auth_users_count: (users as { total?: number })?.total ?? 0,
     storage_buckets: buckets ?? [],
     tables: tables.map((t) => ({ table_schema: "public", table_name: t })),
@@ -76,6 +114,13 @@ async function introspect() {
 }
 
 async function dumpTableRows(table: string, maxRows = 50000) {
+  if (sql) {
+    const safeTable = table.replaceAll('"', '""');
+    const limit = Math.max(1, Math.min(Number(maxRows) || 50000, 50000));
+    const rows = await sql.unsafe('select * from public."' + safeTable + '" limit ' + limit) as unknown[];
+    return { table, rows };
+  }
+
   const rows: unknown[] = [];
   const pageSize = 1000;
   let from = 0;
@@ -126,7 +171,7 @@ async function dumpStorageManifest() {
 }
 
 async function dump() {
-  const tables = await listPublicTables();
+  const { tables, source } = await listPublicTables();
   const tableDumps = [] as Array<{ table: string; rows: unknown[]; error?: string }>;
   for (const t of tables) {
     tableDumps.push(await dumpTableRows(t));
@@ -136,6 +181,8 @@ async function dump() {
   return {
     project_id: PROJECT_ID,
     supabase_url: SUPABASE_URL,
+    exporter_version: EXPORTER_VERSION,
+    table_source: source,
     captured_at: new Date().toISOString(),
     tables: tableDumps,
     auth,
